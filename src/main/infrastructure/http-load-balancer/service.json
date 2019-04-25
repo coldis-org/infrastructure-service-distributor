@@ -1,0 +1,47 @@
+{
+	"id": "service-distribution-http-load-balancer",
+	"acceptedResourceRoles": [
+		"slave_public"
+	],
+	"container": {
+		"portMappings": [
+			{
+				"containerPort": 80,
+				"hostPort": 80
+			},
+			{
+				"containerPort": 443,
+				"hostPort": 443
+			}
+		],
+		"type": "MESOS",
+		"volumes": [
+			{
+				"containerPath": "persistent-config/service",
+				"mode": "RW",
+				"external": {
+					"size": 1,
+					"name": "service-distribution-http-load-balancer-service-config",
+					"provider": "dvdi",
+					"options": {
+						"dvdi/driver": "rexray"
+					}
+				}
+			}
+		],
+		"docker": {
+			"image": "coldis/service-distribution-http-load-balancer",
+			"forcePullImage": true
+		}
+	},
+	"env": {
+		"DOMAIN": "coldis.org",
+		"INTRANET_IP": ""
+	},
+	"healthChecks": [],
+	"args": [],
+	"cpus": 1,
+	"disk": 200,
+	"instances": 1,
+	"mem": 1024
+}

@@ -1,7 +1,7 @@
 {
 	"container": {
 		"docker": {
-			"image": "coldis.org/service-distribution-http-load-balancer:development"
+			"image": "coldis.org/service-distributor-http-load-balancer:development"
 		}
 	},
 	"cpus": 0.5,

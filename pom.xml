@@ -11,7 +11,7 @@
 	</parent>
 
 	<groupId>org.coldis.infrastructure</groupId>
-	<artifactId>service-distribution</artifactId>
+	<artifactId>service-distributor</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -21,9 +21,9 @@
 	</properties>
 
 	<scm>
-		<url>https://github.com/coldis-org/infrastructure-service-distribution</url>
-		<connection>scm:git:https://github.com/coldis-org/infrastructure-service-distribution.git</connection>
-		<developerConnection>scm:git:git@github.com:coldis-org/infrastructure-service-distribution.git</developerConnection>
+		<url>https://github.com/coldis-org/infrastructure-service-distributor</url>
+		<connection>scm:git:https://github.com/coldis-org/infrastructure-service-distributor.git</connection>
+		<developerConnection>scm:git:git@github.com:coldis-org/infrastructure-service-distributor.git</developerConnection>
 		<tag>HEAD</tag>
 	</scm>
 

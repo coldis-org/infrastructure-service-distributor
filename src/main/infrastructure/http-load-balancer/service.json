@@ -1,5 +1,5 @@
 {
-	"id": "service-distribution-http-load-balancer",
+	"id": "service-distributor-http-load-balancer",
 	"acceptedResourceRoles": [
 		"slave_public"
 	],
@@ -21,7 +21,7 @@
 				"mode": "RW",
 				"external": {
 					"size": 1,
-					"name": "service-distribution-http-load-balancer-service-config",
+					"name": "service-distributor-http-load-balancer-service-config",
 					"provider": "dvdi",
 					"options": {
 						"dvdi/driver": "rexray"
@@ -30,7 +30,7 @@
 			}
 		],
 		"docker": {
-			"image": "coldis/service-distribution-http-load-balancer",
+			"image": "coldis/service-distributor-http-load-balancer",
 			"forcePullImage": true
 		}
 	},

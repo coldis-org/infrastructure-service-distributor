@@ -1,0 +1,34 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+	<modelVersion>4.0.0</modelVersion>
+
+	<parent>
+		<groupId>org.coldis</groupId>
+		<artifactId>common-config</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+	</parent>
+
+	<groupId>org.coldis.infrastructure</groupId>
+	<artifactId>service-distribution</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>Infrastucture access control service</name>
+
+	<properties>
+	</properties>
+
+	<scm>
+		<url>https://github.com/coldis-org/infrastructure-service-distribution</url>
+		<connection>scm:git:https://github.com/coldis-org/infrastructure-service-distribution.git</connection>
+		<developerConnection>scm:git:git@github.com:coldis-org/infrastructure-service-distribution.git</developerConnection>
+		<tag>HEAD</tag>
+	</scm>
+
+	<dependencies>
+
+	</dependencies>
+
+</project>

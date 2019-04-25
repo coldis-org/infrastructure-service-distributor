@@ -1,0 +1,10 @@
+{
+	"container": {
+		"docker": {
+			"image": "coldis.org/service-distribution-http-load-balancer:development"
+		}
+	},
+	"cpus": 0.5,
+	"disk": 200,
+	"mem": 512
+}

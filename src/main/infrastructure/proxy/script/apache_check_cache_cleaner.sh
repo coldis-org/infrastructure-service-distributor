@@ -4,12 +4,9 @@
 set -o errexit
 #set -o pipefail
 
-# Debug is disabled by default.
+# Default parameters.
 DEBUG=false
 DEBUG_OPT=
-
-# Default paramterers.
-HAPROXY_PARAMETERS=
 
 # For each argument.
 while :; do
@@ -20,10 +17,10 @@ while :; do
 			DEBUG=true
 			DEBUG_OPT="--debug"
 			;;
-
+			
 		# Other option.
 		?*)
-			HAPROXY_PARAMETERS="${HAPROXY_PARAMETERS} ${1}"
+			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -41,9 +38,15 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo  "Running 'haproxy_init'"
+${DEBUG} && echo "Running 'apache_check_cache_cleaner'"
 
-# Executes the init script.
-${DEBUG} && echo "exec /docker-entrypoint.sh haproxy ${HAPROXY_PARAMETERS}"
-exec /docker-entrypoint.sh haproxy ${HAPROXY_PARAMETERS}
-
+# If the cache cleaner is not running.
+if pgrep -fl htcacheclean
+then 
+	${DEBUG} && echo "Cache cleaner running."
+else
+	${DEBUG} && echo "Cache cleaner not running. Restarting..."
+	apache_start_cache_cleaner &
+	${DEBUG} && echo "Cache cleaner restarted..."	
+	exit 1
+fi

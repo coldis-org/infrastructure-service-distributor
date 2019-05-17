@@ -6,7 +6,7 @@
 
 	<parent>
 		<groupId>org.coldis</groupId>
-		<artifactId>common-config</artifactId>
+		<artifactId>configuration</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 	</parent>
 

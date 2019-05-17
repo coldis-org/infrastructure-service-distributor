@@ -1,7 +1,0 @@
-{
-	"container": {
-		"docker": {
-			"image": "coldis.org/service-distributor-http-load-balancer:production"
-		}
-	}
-}

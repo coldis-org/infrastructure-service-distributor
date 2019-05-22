@@ -23,10 +23,23 @@
 		"type": "MESOS",
 		"volumes": [
 			{
-				"containerPath": " /usr/local/apache2/conf/vhosts",
+				"containerPath": "/usr/local/apache2/conf/vhost",
 				"mode": "RW",
 				"external": {
 					"name": "infrastructure-service-distributor-proxy",
+					"provider": "dvdi",
+					"size": 1,
+					"options": {
+						"dvdi/driver": "rexray",
+						"dvdi/volumetype": "gp2"
+					}
+				}
+			},
+			{
+				"containerPath": "/etc/letsencrypt",
+				"mode": "RW",
+				"external": {
+					"name": "infrastructure-service-distributor-cert",
 					"provider": "dvdi",
 					"size": 1,
 					"options": {

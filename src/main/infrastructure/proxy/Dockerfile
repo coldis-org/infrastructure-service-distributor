@@ -39,7 +39,6 @@ RUN apt-get update -y ; \
 	rm -rf /var/lib/apt/lists/*
 
 # Copies configuration files.
-ENV VHOSTS=/usr/local/apache2/conf/vhost
 COPY config/ /usr/local/apache2/conf/
 
 # Copies the scripts.

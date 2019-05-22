@@ -7,6 +7,7 @@ set -o errexit
 # Default parameters.
 DEBUG=false
 DEBUG_OPT=
+VHOSTS=/usr/local/apache2/conf/vhost
 
 # For each argument.
 while :; do
@@ -43,21 +44,31 @@ set -o nounset
 # Enables interruption signal handling.
 trap - INT TERM
 
-# Print arguments if on debug mode.
-${DEBUG} && echo "Running 'apache_add_vhost'"
-${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
-
 # Prepares virtual host.
 VHOST=${VHOSTS}/${VHOST_NAME}.conf
 rm -rf ${VHOST}
 touch ${VHOST}
+
+# Print arguments if on debug mode.
+${DEBUG} && echo "Running 'apache_add_vhost'"
+${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
+${DEBUG} && echo "VHOST=${VHOST}"
+
 # Reads the input file line by line.
 while read VHOST_LINE
 do
-	
 	echo "${VHOST_LINE}" >> ${VHOST}
-
 done
+${DEBUG} && cat ${VHOST}
 
-# Reloads the configuration.
-/etc/init.d/apache2 reload
+# If the config cannot be reloaded.
+${DEBUG} && echo "Reloading config"
+if ! /usr/local/apache2/bin/httpd -k graceful
+then
+	# Erases the virtual host config.
+	${DEBUG} && echo "Removing virtual host"
+	rm -rf ${VHOST}
+	/usr/local/apache2/bin/httpd -k graceful
+	exit "Virtual host config invalid"
+fi
+

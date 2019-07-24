@@ -55,6 +55,9 @@ RUN chmod -R 755 /opt/apache-script && \
 COPY static/ /usr/local/apache2/htdocs/
 RUN chown www-data.www-data -R /usr/local/apache2/htdocs/
 
+# Hostname. Should be override.
+ENV HOST_NAME=localhost
+
 # Command.
 ENTRYPOINT [ "apache_start" ]
 CMD [ "httpd-foreground" ]

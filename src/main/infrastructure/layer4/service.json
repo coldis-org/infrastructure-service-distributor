@@ -1,5 +1,5 @@
 {
-	"id": "/infrastructure-service-distributor-web",
+	"id": "/infrastructure-service-distributor-layer4",
 	"instances": 1,
 	"cpus": 0.5,
 	"disk": 200,
@@ -26,7 +26,7 @@
 				"containerPath": "/usr/local/apache2/conf/vhost",
 				"mode": "RW",
 				"external": {
-					"name": "infrastructure-service-distributor-web",
+					"name": "infrastructure-service-distributor-layer4",
 					"provider": "dvdi",
 					"options": {
 						"dvdi/driver": "rexray"
@@ -46,7 +46,7 @@
 			}
 		],
 		"docker": {
-			"image": "coldis/infrastructure-service-distributor-web",
+			"image": "coldis/infrastructure-service-distributor-layer4",
 			"forcePullImage": true
 		}
 	},

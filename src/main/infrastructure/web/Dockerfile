@@ -26,14 +26,14 @@ RUN apt-get update -y && \
 	rm -rf /var/lib/apt/lists/*
 	
 # Installs modules.
-RUN apt-get update -y ; \
-	apt-get install -y libapache2-modsecurity libapache2-mod-evasive ; \
-	mkdir /var/log/apache2 ; \
-	mkdir /var/cache/apache ; \
-	mkdir /var/log/apache2/mod_evasive ; \
-	mkdir /usr/local/apache2/static/ ; \
-	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ ; \
-	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ ; \
+RUN apt-get update -y && \
+	apt-get install -y libapache2-mod-security2 libapache2-mod-evasive && \
+	mkdir -p /var/log/apache2 && \
+	mkdir -p /var/cache/apache && \
+	mkdir -p /var/log/apache2/mod_evasive && \
+	mkdir -p /usr/local/apache2/static/ && \
+	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
+	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
 	cp /usr/lib/apache2/modules/mod_evasive20.so /usr/local/apache2/modules/ && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*

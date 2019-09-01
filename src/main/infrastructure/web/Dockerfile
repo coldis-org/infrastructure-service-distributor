@@ -1,5 +1,5 @@
 # From Apache image.
-FROM httpd:2.4.39
+FROM httpd:2.4.41
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -35,6 +35,20 @@ RUN apt-get update -y && \
 	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
 	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
 	cp /usr/lib/apache2/modules/mod_evasive20.so /usr/local/apache2/modules/ && \
+	apt-get clean -y && \
+	rm -rf /var/lib/apt/lists/*
+	
+# Installs security rules.
+RUN apt-get update -y && \
+	apt-get install -y wget unzip && \
+	mkdir -p /usr/local/apache2/conf/extra/crs && \
+	wget "https://github.com/SpiderLabs/owasp-modsecurity-crs/archive/v3.1.1.zip" -O security.zip && \
+	unzip security.zip -d /usr/local/apache2/conf/extra/crs && \
+	rm -f security.zip && \
+	TMP_DIR=`ls /usr/local/apache2/conf/extra/crs` && \
+	mv /usr/local/apache2/conf/extra/crs/${TMP_DIR}/* /usr/local/apache2/conf/extra/crs/ && \
+	rm -R /usr/local/apache2/conf/extra/crs/${TMP_DIR} && \
+	apt-get remove -y wget unzip && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 

@@ -8,6 +8,8 @@ set -o errexit
 DEBUG=false
 DEBUG_OPT=
 HAPROXY_PARAMETERS=
+CERT_PATH=/etc/ssl/supersim
+CERT_INFO="/C=${CERT_C}/ST=${CERT_ST}/L=${CERT_L}/O=${CERT_O}/OU=${CERT_OU}/CN=${CERT_CN}"
 
 # For each argument.
 while :; do
@@ -40,6 +42,15 @@ trap - INT TERM
 
 # Print arguments if on debug mode.
 ${DEBUG} && echo  "Running 'haproxy_init'"
+
+# Generates certificates.
+mkdir -p ${CERT_PATH}
+openssl genrsa -out ${CERT_PATH}/supersim-key.pem 2048 
+openssl req -new -new -key ${CERT_PATH}/supersim-key.pem -out ${CERT_PATH}/supersim.csr \
+	-subj "${CERT_INFO}"
+openssl x509 -req -in ${CERT_PATH}/supersim.csr -out ${CERT_PATH}/supersim.crt
+cat ${CERT_PATH}/supersim.crt ${CERT_PATH}/supersim.key | \
+	tee ${CERT_PATH}/supersim.pem
 
 # Executes the init script.
 ${DEBUG} && echo "exec /docker-entrypoint.sh haproxy ${HAPROXY_PARAMETERS}"

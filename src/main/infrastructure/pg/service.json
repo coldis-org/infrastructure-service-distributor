@@ -1,5 +1,5 @@
 {
-	"id": "/infrastructure-service-distributor-layer4",
+	"id": "/infrastructure-service-distributor-pg",
 	"instances": 1,
 	"cpus": 0.5,
 	"disk": 200,
@@ -22,7 +22,7 @@
 				"containerPath": "/usr/local/etc/haproxy/service",
 				"mode": "RW",
 				"external": {
-					"name": "infrastructure-service-distributor-layer4",
+					"name": "infrastructure-service-distributor-pg",
 					"provider": "dvdi",
 					"options": {
 						"dvdi/driver": "rexray"
@@ -31,7 +31,7 @@
 			}
 		],
 		"docker": {
-			"image": "coldis/infrastructure-service-distributor-layer4",
+			"image": "coldis/infrastructure-service-distributor-pg",
 			"forcePullImage": true
 		}
 	},

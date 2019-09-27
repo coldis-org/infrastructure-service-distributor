@@ -1,5 +1,5 @@
 # From HAProxy image.
-FROM haproxy:1.9.6
+FROM haproxy:2.0.6
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -32,8 +32,8 @@ RUN chmod -R 755 /opt/haproxy-script && \
 COPY config/ /usr/local/etc/haproxy/
 
 # Service config folder.
-ENV SERVICE_CONFIG_DIRECTORY=persistent-config/service
-RUN mkdir -p ${SERVICE_CONFIG_DIRECTORY}
+ENV SERVICE_CONFIG_DIRECTORY=/usr/local/etc/haproxy/service
+RUN mkdir -p /usr/local/etc/haproxy/service
 
 # Entrypoint with multiple configuration directories.
 ENTRYPOINT [ "haproxy_init", "-f", "/usr/local/etc/haproxy", "-f", "/usr/local/etc/haproxy/service" ]

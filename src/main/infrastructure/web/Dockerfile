@@ -40,7 +40,7 @@ RUN apt-get update -y && \
 	
 # Installs security rules.
 RUN apt-get update -y && \
-	apt-get install -y wget unzip && \
+	apt-get install -y wget unzip dnsutils && \
 	mkdir -p /usr/local/apache2/conf/extra/crs && \
 	wget "https://github.com/SpiderLabs/owasp-modsecurity-crs/archive/v3.1.1.zip" -O security.zip && \
 	unzip security.zip -d /usr/local/apache2/conf/extra/crs && \

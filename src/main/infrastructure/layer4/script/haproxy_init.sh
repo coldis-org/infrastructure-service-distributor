@@ -43,14 +43,14 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo  "Running 'haproxy_init'"
 
-# Generates certificates.
-mkdir -p ${CERT_PATH}
-openssl genrsa -out ${CERT_PATH}/supersim-key.pem 2048 
-openssl req -new -new -key ${CERT_PATH}/supersim-key.pem -out ${CERT_PATH}/supersim.csr \
-	-subj "${CERT_INFO}"
-openssl x509 -req -in ${CERT_PATH}/supersim.csr -out ${CERT_PATH}/supersim.crt
-cat ${CERT_PATH}/supersim.crt ${CERT_PATH}/supersim.key | \
-	tee ${CERT_PATH}/supersim.pem
+# Configures intranet ACL to be updated every 10 minutes.
+${DEBUG} && echo "Configuring 'haproxy_update_intranet'"
+haproxy_update_intranet --debug &
+
+# Starts syslog.
+readonly RSYSLOG_PID="/var/run/rsyslogd.pid"
+rm -f $RSYSLOG_PID
+rsyslogd
 
 # Executes the init script.
 ${DEBUG} && echo "exec /docker-entrypoint.sh haproxy ${HAPROXY_PARAMETERS}"

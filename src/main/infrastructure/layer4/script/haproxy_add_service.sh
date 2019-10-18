@@ -62,7 +62,7 @@ ${DEBUG} && cat ${SERVICE}
 
 # If the config is not valid.
 ${DEBUG} && echo "Testing config"
-if ! /usr/local/sbin/haproxy -c -f ${SERVICE}
+if ! /usr/local/sbin/haproxy -c -f /usr/local/etc/haproxy -f /usr/local/etc/haproxy/service
 then
 	# Erases the service config.
 	${DEBUG} && echo "Removing config"

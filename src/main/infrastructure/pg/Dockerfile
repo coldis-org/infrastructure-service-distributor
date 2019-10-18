@@ -27,7 +27,7 @@ RUN chmod -R 755 /opt/pgbouncer-script && \
 	done
 	
 # Goes back to the postgres user.	
-USER postgres
+#USER postgres
 
 # Entrypoint.
-ENTRYPOINT [ "/usr/bin/pgbouncer_init" ]
+ENTRYPOINT [ "pgbouncer_init" ]

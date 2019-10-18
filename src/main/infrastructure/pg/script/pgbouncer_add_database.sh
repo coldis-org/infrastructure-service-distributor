@@ -63,7 +63,7 @@ then
 # If the database is not configured.
 else 
 	# Adds the new configuration.
-	echo "${DATABASE_NAME} = ${DATABASE_CONFIG}/" >> ${CONFIG_DIR}/database/database.ini
+	echo "${DATABASE_NAME} = ${DATABASE_CONFIG}" >> ${CONFIG_DIR}/database/database.ini
 fi
 
 # Reloads the configuration.

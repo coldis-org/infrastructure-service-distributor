@@ -11,6 +11,7 @@ PGBOUNCER_PARAMETERS=
 CERT_PATH=/etc/ssl/certs
 CERT_FILE_PREFIX=coldis
 CERT_INFO="/C=${CERT_C}/ST=${CERT_ST}/L=${CERT_L}/O=${CERT_O}/OU=${CERT_OU}/CN=${CERT_CN}"
+RESET=${RESET:=false} 
 
 # For each argument.
 while :; do
@@ -42,29 +43,31 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo  "Running 'haproxy_init'"
+${DEBUG} && echo  "Running 'pgbouncer_init'"
 
 # Generates certificates.
 openssl req -new -x509 -nodes -text -out ${CERT_PATH}/server.crt \
 	-keyout ${CERT_PATH}/server.key -subj "${CERT_INFO}"
 chmod og-rwx ${CERT_PATH}/server.key
 
-# If there is no config file yet.
-if [ ! -f ${CONFIG_DIR}/pgbouncer.ini ]
-then
-	# Copies the config files.
-	cp -R ${TMP_CONF}/* ${CONFIG_DIR}/
-	
-	# For each configuratin file.
-	for FILE in ${CONFIG_DIR}/*
-	do 
+# Copies the config files.
+cp -R ${TMP_CONF}/* ${CONFIG_DIR}
+
+# For each configuratin file.
+for FILE in ${CONFIG_DIR}/*
+do 
+	# If it is a file.
+	if [ -f ${FILE} ]
+	then
 		# Replaces variables in the files.
-		envsubst < ${FILE} > ${FILE}
-	done
-fi
+		NEW_FILE=$(envsubst < ${FILE})
+		echo "${NEW_FILE}" > ${FILE}
+		${DEBUG} && cat ${FILE}
+	fi
+done
 
 # If the database file does not exist.
-if [ ! -f ${CONFIG_DIR}/database/database.ini ]
+if [ ! -f ${CONFIG_DIR}/database/database.ini ] || ${RESET}
 then
 
 	# Creates it.
@@ -73,7 +76,10 @@ then
 
 fi
 
+chown -R postgres ${CERT_PATH} ${CONFIG_DIR}
+
 # Executes the init script.
 ${DEBUG} && echo "exec /opt/pgbouncer/pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini"
+su postgres
 exec /opt/pgbouncer/pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini
 

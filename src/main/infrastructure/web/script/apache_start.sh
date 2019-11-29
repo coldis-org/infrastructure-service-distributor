@@ -38,13 +38,10 @@ set -o nounset
 # Enables interruption signal handling.
 trap - INT TERM
 
-# Starts the http cache clean job.
-${DEBUG} && echo "Running 'apache_check_cache_cleaner'"
-apache_start_cache_cleaner ${DEBUG_OPT} &
-
-# Configures intranet ACL to be updated every 10 minutes.
-${DEBUG} && echo "Configuring 'apache_update_intranet'"
-apache_update_intranet --debug &
+# Starts cron.
+env > /etc/docker_env
+chmod +x /etc/docker_env
+service cron start
 
 # Runs the start command.
 ${DEBUG} && echo "exec ${CMD}"

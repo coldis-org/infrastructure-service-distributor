@@ -40,49 +40,38 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'apache_update_intranet'"
 
-# Every 10 minutes.
 CONF_FILE=/usr/local/apache2/conf/extra/httpd-intranet.conf
-while true
-do 
 
-	sleep 60
+# For each host.
+CONFIG_UPDATED=false
+for HOST_NUMBER in $(seq 0 4)
+do
 
-	# For each host.
-	CONFIG_UPDATED=false
-	for HOST_NUMBER in $(seq 0 4)
-	do
+	# Gets the old and new host IPs.
+	OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}" | grep "Allow" | sed "s/^[ \t]*//g" )
+	NEW_HOST_CONFIG="Allow from $( dig +short site${HOST_NUMBER}.${INTRANET_HOST_NAME} | tail -1 )"
+	NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
+	${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
+	${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 	
-		# Gets the old and new host IPs.
-		OLD_HOST_IP=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}" | \
-			grep "Allow" | sed -e "s/\([^0-9\.]\)//g" )
-		NEW_HOST_IP=$(dig +short site${HOST_NUMBER}.${INTRANET_HOST_NAME} | \
-			tail -1 )
-		NEW_HOST_IP=${NEW_HOST_IP:=${OLD_HOST_IP}}
-		${DEBUG} && echo "OLD_HOST_IP=${OLD_HOST_IP}"
-		${DEBUG} && echo  "NEW_HOST_IP=${NEW_HOST_IP}"
-		
-		# Replaces them in the intranet file.
-		sed -i "s/${OLD_HOST_IP}/${NEW_HOST_IP}/g" ${CONF_FILE}
-		
-		# If the IP has changed.
-		if [ "${OLD_HOST_IP}" != "${NEW_HOST_IP}" ]
-		then
-			# Sets that configuration has been updated.
-			CONFIG_UPDATED=true
-		fi
+	# Replaces them in the intranet file.
+	sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
 	
-	done
-	
-	# Reloads the configuration.
-	${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
-	if ${CONFIG_UPDATED}
+	# If the IP has changed.
+	if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
 	then
-		apachectl graceful
+		# Sets that configuration has been updated.
+		CONFIG_UPDATED=true
 	fi
-		
-	sleep 600
-	
+
 done
+
+# Reloads the configuration.
+${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
+if ${CONFIG_UPDATED}
+then
+	kill -USR1 1
+fi
 
 
 

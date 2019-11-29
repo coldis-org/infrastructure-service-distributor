@@ -72,4 +72,3 @@ else
 	# Reloads the configuration.
 	kill -HUP 1
 fi
-

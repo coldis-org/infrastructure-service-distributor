@@ -1,0 +1,1 @@
+* * * * * set -a; . /etc/docker_env; set +a; export INTRANET_HOST_NAME; haproxy_update_intranet --debug >> /proc/1/fd/1 2>&1

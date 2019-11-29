@@ -8,8 +8,6 @@ set -o errexit
 DEBUG=false
 DEBUG_OPT=
 HAPROXY_PARAMETERS=
-CERT_PATH=/etc/ssl/supersim
-CERT_INFO="/C=${CERT_C}/ST=${CERT_ST}/L=${CERT_L}/O=${CERT_O}/OU=${CERT_OU}/CN=${CERT_CN}"
 
 # For each argument.
 while :; do
@@ -45,7 +43,11 @@ ${DEBUG} && echo  "Running 'haproxy_init'"
 
 # Configures intranet ACL to be updated every 10 minutes.
 ${DEBUG} && echo "Configuring 'haproxy_update_intranet'"
-haproxy_update_intranet --debug &
+
+# Starts cron.
+env > /etc/docker_env
+chmod +x /etc/docker_env
+service cron start
 
 # Starts syslog.
 readonly RSYSLOG_PID="/var/run/rsyslogd.pid"

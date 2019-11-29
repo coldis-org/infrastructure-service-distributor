@@ -18,11 +18,27 @@ RUN apt-get update -y && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 
+# Installs cron.	
+RUN apt-get update -y && \
+	apt-get install -y cron && \
+	apt-get clean -y && \
+	rm -rf /var/lib/apt/lists/*
+
 # Installs dig.
 RUN apt-get update -y && \
 	apt-get install -y dnsutils && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
+	
+# Configures syslog.
+RUN apt-get update -y && \
+	apt-get install -y rsyslog && \
+	apt-get clean -y && \
+	rm -rf /var/lib/apt/lists/* && \
+	mkdir -p /etc/rsyslog.d && \
+	touch /var/log/haproxy.log && \
+	ln -sf /dev/stdout /var/log/haproxy.log
+COPY rsyslog.conf /etc/rsyslog.d/
 
 # Copies the scripts.
 RUN mkdir -p /opt/haproxy-script
@@ -33,16 +49,12 @@ RUN chmod -R 755 /opt/haproxy-script && \
 	do \
 		mv -- "${FILE}" "${FILE%.sh}"; \
 	done
-	
-RUN apt-get update -y && \
-	apt-get install -y rsyslog && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/* && \
-	mkdir -p /etc/rsyslog.d && \
-	touch /var/log/haproxy.log && \
-	ln -sf /dev/stdout /var/log/haproxy.log
-COPY rsyslog.conf /etc/rsyslog.d/
-	
+
+# Configures scheduled jobs (intranet updates)
+COPY cron /etc/cron.d
+RUN chmod -R 0644 /etc/cron.d/ && \
+	crontab /etc/cron.d/haproxy_jobs
+
 # Copies the configuration.
 COPY config/ /usr/local/etc/haproxy/
 

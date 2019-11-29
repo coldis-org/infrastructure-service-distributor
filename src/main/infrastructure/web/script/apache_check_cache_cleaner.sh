@@ -47,6 +47,6 @@ then
 else
 	${DEBUG} && echo "Cache cleaner not running. Restarting..."
 	apache_start_cache_cleaner &
-	${DEBUG} && echo "Cache cleaner restarted..."	
+	${DEBUG} && echo "Cache cleaner restarted..."
 	exit 1
 fi

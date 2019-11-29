@@ -1,0 +1,3 @@
+0 0 * * * set -a; . /etc/docker_env; set +a; apache_check_cache_cleaner >> /proc/1/fd/1 2>&1
+0 0 * * * set -a; . /etc/docker_env; set +a; certbot renew >> /proc/1/fd/1 2>&1
+* * * * * set -a; . /etc/docker_env; set +a; apache_update_intranet --debug >> /proc/1/fd/1 2>&1

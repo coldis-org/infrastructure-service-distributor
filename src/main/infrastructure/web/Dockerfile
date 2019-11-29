@@ -17,6 +17,12 @@ RUN apt-get update -y && \
 	apt-get purge -y locales && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
+
+# Installs cron.	
+RUN apt-get update -y && \
+	apt-get install -y cron && \
+	apt-get clean -y && \
+	rm -rf /var/lib/apt/lists/*
 	
 # Installs certbot.
 RUN apt-get update -y && \
@@ -64,13 +70,19 @@ RUN chmod -R 755 /opt/apache-script && \
 	do \
 		mv -- "${FILE}" "${FILE%.sh}"; \
 	done
+	
+# Configures scheduled jobs (cert and intranet updates)
+COPY cron /etc/cron.d
+RUN chmod -R 0644 /etc/cron.d/ && \
+	crontab /etc/cron.d/apache_jobs
 
 # Sets static resources folder.
 COPY static/ /usr/local/apache2/htdocs/
 RUN chown www-data.www-data -R /usr/local/apache2/htdocs/
 
 # Hostname. Should be override.
-ENV HOST_NAME=localhost
+ENV HOST_NAME=localhost \
+	INTRANET_HOST_NAME=localhost	
 
 # Command.
 ENTRYPOINT [ "apache_start" ]

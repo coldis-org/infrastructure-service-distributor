@@ -1,3 +1,6 @@
+# From modsecurity.
+FROM owasp/modsecurity:3.0.3-apache AS modsecurity3
+
 # From Apache image.
 FROM httpd:2.4.41
 
@@ -31,18 +34,8 @@ RUN apt-get update -y && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 	
-# Installs modules.
-RUN apt-get update -y && \
-	apt-get install -y libapache2-mod-security2 libapache2-mod-evasive && \
-	mkdir -p /var/log/apache2 && \
-	mkdir -p /var/cache/apache && \
-	mkdir -p /var/log/apache2/mod_evasive && \
-	mkdir -p /usr/local/apache2/static/ && \
-	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
-	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
-	cp /usr/lib/apache2/modules/mod_evasive20.so /usr/local/apache2/modules/ && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*
+# Installs the security module.
+COPY --from=modsecurity3  /usr/local/apache2/modules/mod_security3.so /usr/local/apache2/modules/mod_security3.so
 	
 # Installs security rules.
 RUN apt-get update -y && \

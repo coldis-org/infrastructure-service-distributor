@@ -1,5 +1,5 @@
 # From Apache image.
-FROM owasp/modsecurity:3.0.3-apache
+FROM httpd:2.4.41
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -30,7 +30,18 @@ RUN apt-get update -y && \
 	(certbot certonly --non-interactive --agree-tos || true) && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
-
+	
+# Installs modules.
+RUN apt-get update -y && \
+	apt-get install -y libapache2-mod-security2 && \
+	mkdir -p /var/log/apache2 && \
+	mkdir -p /var/cache/apache && \
+	mkdir -p /usr/local/apache2/static/ && \
+	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
+	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
+	apt-get clean -y && \
+	rm -rf /var/lib/apt/lists/*
+	
 # Installs security rules.
 RUN apt-get update -y && \
 	apt-get install -y wget unzip dnsutils && \
@@ -43,7 +54,7 @@ RUN apt-get update -y && \
 	rm -R /usr/local/apache2/conf/extra/crs/${TMP_DIR} && \
 	apt-get remove -y wget unzip && \
 	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*apache
+	rm -rf /var/lib/apt/lists/*
 
 # Copies configuration files.
 COPY config/ /usr/local/apache2/conf/

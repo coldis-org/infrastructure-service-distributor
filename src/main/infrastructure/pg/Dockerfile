@@ -1,5 +1,5 @@
 # From PGBouncer.
-FROM pgbouncer/pgbouncer:1.11.0
+FROM pgbouncer/pgbouncer:1.12.0
 
 # Changes to root usr.
 USER root

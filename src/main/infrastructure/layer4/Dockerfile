@@ -1,5 +1,5 @@
 # From HAProxy image.
-FROM haproxy:2.0.6
+FROM haproxy:2.1.3
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \

@@ -55,21 +55,31 @@ do
 		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}" | \
 			tail -1 | sed -e "s/^[ \t]*//g" )
 		OLD_HOST_CONFIG=${OLD_HOST_CONFIG:="acl network_allowed src 127.0.0.255"}
-		NEW_HOST_CONFIG="acl network_allowed src $( dig +short site${HOST_NUMBER}.${INTRANET_HOST_NAME} | \
-			tail -1 )"
-		NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
-		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
-		${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 		
-		# Replaces them in the intranet file.
-		sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
+		# If the Intranet IP is valid.
+		INTRANET_IP=$( dig +short site${HOST_NUMBER}.${INTRANET_HOST_NAME} | tail -1 )
+		if expr "${INTRANET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+
+			NEW_HOST_CONFIG="acl network_allowed src ${INTRANET_IP}"
+			NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
+			${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
+			${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
+			
+			# Replaces them in the intranet file.
+			sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
+			
+			# If the IP has changed.
+			if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
+			then
+				# Sets that configuration has been updated.
+				CONFIG_UPDATED=true
+			fi
 		
-		# If the IP has changed.
-		if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
-		then
-			# Sets that configuration has been updated.
-			CONFIG_UPDATED=true
+		# If the Intranet IP is not valid.
+		else
+			${DEBUG} && echo "Invalid intranet IP: ${INTRANET_IP}"
 		fi
+
 	
 	done
 

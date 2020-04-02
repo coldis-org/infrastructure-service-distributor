@@ -42,15 +42,15 @@ trap - INT TERM
 ${DEBUG} && echo  "Running 'haproxy_init'"
 
 # Moves front end config to service (persistent) folder.
-for CONFIG_FILE in $(find /usr/local/etc/haproxy/10-frontend*  -printf "%f\n")
+for CONFIG_FILE in $(find /usr/local/etc/haproxy/10-frontend* -printf "%f\n")
 do
 
 	# If the front end config is present in the service folder.
-	if [ -f /usr/local/etc/haproxy/${CONFIG_FILE} ]
+	if [ ! -f /usr/local/etc/haproxy/service/${CONFIG_FILE} ]
 	then
 		# Moves the file to the service folder.
 		(${DEBUG} || true ) && echo  "Moving ${CONFIG_FILE} to service folder."
-		mv /usr/local/etc/haproxy/${CONFIG_FILE} /usr/local/etc/haproxy/
+		mv /usr/local/etc/haproxy/${CONFIG_FILE} /usr/local/etc/haproxy/service
 	
 	# If the front end config is present in the service folder.
 	else

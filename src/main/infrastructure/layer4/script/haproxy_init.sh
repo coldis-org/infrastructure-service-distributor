@@ -41,8 +41,28 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo  "Running 'haproxy_init'"
 
+# Moves front end config to service (persistent) folder.
+for CONFIG_FILE in /usr/local/etc/haproxy/10-frontend*
+do
+
+	# If the front end config is present in the service folder.
+	if [ -f /usr/local/etc/haproxy/service/${CONFIG_FILE} ]
+	then
+		# Moves the file to the service folder.
+		mv /usr/local/etc/haproxy/${CONFIG_FILE} /usr/local/etc/haproxy/service/${CONFIG_FILE}
+	
+	# If the front end config is present in the service folder.
+	else
+		rm -f /usr/local/etc/haproxy/${CONFIG_FILE}
+		${DEBUG} && echo  "Not moving ${CONFIG_FILE}. File already present."
+	fi
+
+done
+
+
 # Configures intranet ACL to be updated every 10 minutes.
 ${DEBUG} && echo "Configuring 'haproxy_update_intranet'"
+
 
 # Starts cron.
 env > /etc/docker_env

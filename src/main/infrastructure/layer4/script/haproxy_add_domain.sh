@@ -8,8 +8,8 @@ set -o errexit
 DEBUG=false
 DEBUG_OPT=
 TEMP=/tmp
-CONFIG_DIR=/usr/local/etc/haproxy
-FRONT_END_FILE=02-frontend
+CONFIG_DIR=/usr/local/etc/haproxy/service
+FRONT_END_FILE=10-frontend
 
 # For each argument.
 while :; do
@@ -91,7 +91,7 @@ sed -i "s/\(Backends ${FRONT_END_CONFIG}.*\)/\1\n\tuse_backend ${BACKEND_CONFIG}
 
 # If the config is not valid.
 ${DEBUG} && echo "Testing config"
-if ! /usr/local/sbin/haproxy -c -f ${CONFIG_DIR} -f ${CONFIG_DIR}/service
+if ! /usr/local/sbin/haproxy -c -f /usr/local/etc/haproxy -f /usr/local/etc/haproxy/service
 then
 	# Reverts the backup config.
 	${DEBUG} && echo "Reverting backup"

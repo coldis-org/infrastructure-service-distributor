@@ -10,6 +10,7 @@ DEBUG_OPT=
 TEMP=/tmp
 CONFIG_DIR=/usr/local/etc/haproxy/service
 FRONT_END_FILE=10-frontend
+PROTOCOL_TYPE=tcp
 
 # For each argument.
 while :; do
@@ -24,6 +25,12 @@ while :; do
 		# Config dir.
 		-c|--config-dir)
 			CONFIG_DIR=${2}
+			shift
+			;;
+
+		# Protocol type.
+		-t|--protocol-type)
+			PROTOCOL_TYPE=${2}
 			shift
 			;;
 
@@ -78,6 +85,7 @@ ${DEBUG} && echo "Running 'haproxy_add_domain'"
 ${DEBUG} && echo "CONFIG_DIR=${CONFIG_DIR}"
 ${DEBUG} && echo "PROTOCOL=${PROTOCOL}"
 ${DEBUG} && echo "DOMAIN=${DOMAIN}"
+${DEBUG} && echo "DOMAIN=${DOMAIN}"
 ${DEBUG} && echo "DOMAIN_CONFIG=${DOMAIN_CONFIG}"
 ${DEBUG} && echo "BACKEND_CONFIG=${BACKEND_CONFIG}"
 
@@ -86,7 +94,12 @@ sed -i "s/.*${DOMAIN_CONFIG}.*//g" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.c
 sed -i "s/.*${BACKEND_CONFIG}.*//g" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.cfg
 
 # Adds the domain config.
-sed -i "s/\(Subdomains ${FRONT_END_CONFIG}.*\)/\1\n\tacl ${DOMAIN_CONFIG} hdr\(host\) -i ${DOMAIN}/" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.cfg
+if [ "PROTOCOL_TYPE" = "http" ]
+then
+	sed -i "s/\(Subdomains ${FRONT_END_CONFIG}.*\)/\1\n\tacl ${DOMAIN_CONFIG} hdr\(host\) -i ${DOMAIN}/" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.cfg
+else 
+	sed -i "s/\(Subdomains ${FRONT_END_CONFIG}.*\)/\1\n\tacl ${DOMAIN_CONFIG} req.payload(5,${#DOMAIN}) -m ${DOMAIN}/" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.cfg
+fi
 sed -i "s/\(Backends ${FRONT_END_CONFIG}.*\)/\1\n\tuse_backend ${BACKEND_CONFIG} if ${DOMAIN_CONFIG}/" ${CONFIG_DIR}/${FRONT_END_FILE}-${PROTOCOL}.cfg
 
 # If the config is not valid.

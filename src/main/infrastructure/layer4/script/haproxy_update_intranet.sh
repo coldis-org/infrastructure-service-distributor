@@ -62,7 +62,7 @@ do
 
 			# If the old configuration is present.
 			${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
-			if (cat ${CONF_FILE} | grep ${OLD_HOST_CONFIG})
+			if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}")
 			then
 
 				NEW_HOST_CONFIG="acl network_allowed src ${INTRANET_IP}"
@@ -79,8 +79,12 @@ do
 					CONFIG_UPDATED=true
 				fi
 			
+			# If the old configuration is not present.
 			else 
-			
+				
+				# No old config is present.
+				${DEBUG} && echo "No old config present."
+				
 			fi
 		
 		# If the Intranet IP is not valid.

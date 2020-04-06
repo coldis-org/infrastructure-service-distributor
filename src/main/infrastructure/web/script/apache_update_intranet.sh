@@ -44,7 +44,7 @@ CONF_FILE=/usr/local/apache2/conf/extra/httpd-intranet.conf
 
 # For each host.
 CONFIG_UPDATED=false
-for HOST_NUMBER in $(seq 0 4)
+for HOST_NUMBER in $(seq 0 9)
 do
 
 	# Gets the old and new host IPs.

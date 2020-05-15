@@ -76,10 +76,14 @@ then
 
 fi
 
-chown -R postgres ${CERT_PATH} ${CONFIG_DIR}
+# Confiures the log.
+PG_LOG=/var/log/postgresql/
+mkdir -p ${PG_LOG}
+chmod -R 755 ${PG_LOG}
+chown -R postgres:postgres ${PG_LOG}
 
 # Executes the init script.
-${DEBUG} && echo "exec /opt/pgbouncer/pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini"
-su postgres
-exec /opt/pgbouncer/pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini
+echo "Starting pgbouncer..."
+${DEBUG} && echo "exec pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini"
+exec pgbouncer ${QUIET:+-q} -u postgres ${CONFIG_DIR}/pgbouncer.ini
 

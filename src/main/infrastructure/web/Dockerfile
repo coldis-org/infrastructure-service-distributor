@@ -1,5 +1,5 @@
 # From Apache image.
-FROM httpd:2.4.41
+FROM httpd:2.4.43
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -46,7 +46,7 @@ RUN apt-get update -y && \
 RUN apt-get update -y && \
 	apt-get install -y wget unzip dnsutils && \
 	mkdir -p /usr/local/apache2/conf/extra/crs && \
-	wget "https://github.com/SpiderLabs/owasp-modsecurity-crs/archive/v3.1.1.zip" -O security.zip && \
+	wget "https://github.com/SpiderLabs/owasp-modsecurity-crs/archive/v3.2.0.zip" -O security.zip && \
 	unzip security.zip -d /usr/local/apache2/conf/extra/crs && \
 	rm -f security.zip && \
 	TMP_DIR=`ls /usr/local/apache2/conf/extra/crs` && \

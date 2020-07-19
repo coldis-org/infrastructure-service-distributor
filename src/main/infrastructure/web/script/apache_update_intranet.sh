@@ -44,11 +44,11 @@ CONF_FILE=/usr/local/apache2/conf/extra/httpd-intranet.conf
 
 # For each host.
 CONFIG_UPDATED=false
-for HOST_NUMBER in $(seq 0 9)
+for HOST_NUMBER in $(seq 0 19)
 do
 
 	# Gets the old and new host IPs.
-	OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}" | grep "Allow" | sed "s/^[ \t]*//g" )
+	OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}." | grep "Allow" | sed "s/^[ \t]*//g" )
 	${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
 
 	# If the Intranet IP is valid.

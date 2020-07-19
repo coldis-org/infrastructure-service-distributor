@@ -56,14 +56,14 @@ ${DEBUG} && echo "DATABASE_CONFIG=${DATABASE_CONFIG}"
 ${DEBUG} && echo "DATABASE=${DATABASE}"
 
 # If the database is configured.
-if cat ${CONFIG_DIR}/database/database.ini | grep "${DATABASE_NAME} ="
+if cat ${PGBOUNCER_CONFIG}/database/database.ini | grep "${DATABASE_NAME} ="
 then
 	# Adds the new configuration.
-	sed -i "s/^${DATABASE_NAME} = [^\\n]*/${DATABASE_NAME} = ${DATABASE_CONFIG}/" ${CONFIG_DIR}/database/database.ini
+	sed -i "s/^${DATABASE_NAME} = [^\\n]*/${DATABASE_NAME} = ${DATABASE_CONFIG}/" ${PGBOUNCER_CONFIG}/database/database.ini
 # If the database is not configured.
 else 
 	# Adds the new configuration.
-	echo "${DATABASE_NAME} = ${DATABASE_CONFIG}" >> ${CONFIG_DIR}/database/database.ini
+	echo "${DATABASE_NAME} = ${DATABASE_CONFIG}" >> ${PGBOUNCER_CONFIG}/database/database.ini
 fi
 
 # Reloads the configuration.

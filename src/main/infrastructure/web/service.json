@@ -52,7 +52,8 @@
 	},
 	"env": {
 		"HOSTNAME": "coldis.org",
-		"INTRANET_IP": "127.0.0.1"
+		"INTRANET_IP": "127.0.0.1",
+		"AVAILABLE_NETS": "developernet,intranet,extranet"
 	},
 	"healthChecks": [],
 	"args": [],

@@ -104,7 +104,7 @@ do
 		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
 	
 		# If the Intranet IP is valid.
-		INTRANET_IP=$( dig +short site${HOST_NUMBER}.${NET} | tail -1 )
+		INTRANET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
 		if expr "${INTRANET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
 		
 			# Gets the new host configuration.		

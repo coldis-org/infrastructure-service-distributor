@@ -100,15 +100,15 @@ do
 	
 		# Gets the old and new host IPs.
 		CONF_FILE=/usr/local/apache2/conf/extra/httpd-access-${NET}.conf
-		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Entry ${HOST_NUMBER}\." | grep "Allow" | sed "s/^[ \t]*//g" )
+		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "${NET} ${HOST_NUMBER}\." | grep "Allow" | sed "s/^[ \t]*//g" )
 		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
 	
 		# If the Intranet IP is valid.
-		INTRANET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
-		if expr "${INTRANET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+		NET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
+		if expr "${NET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
 		
 			# Gets the new host configuration.		
-			NEW_HOST_CONFIG="Allow from ${INTRANET_IP}"
+			NEW_HOST_CONFIG="Allow from ${NET_IP}"
 			NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
 			${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 			
@@ -117,7 +117,7 @@ do
 				! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}")
 			then
 			
-				# Replaces them in the intranet file.
+				# Replaces them in the net file.
 				sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
 			
 				# If the IP has changed.
@@ -137,7 +137,7 @@ do
 	
 		# If the Intranet IP is not valid.
 		else
-			${DEBUG} && echo "Invalid intranet IP: ${INTRANET_IP}"
+			${DEBUG} && echo "Invalid net IP: ${NET_IP}"
 		fi
 	
 	done

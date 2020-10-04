@@ -98,6 +98,68 @@ do
 	done
 
 done
+
+# For each available net.
+for NET in $(echo ${AVAILABLE_NETS} | sed "s/,/ /g")
+do
+
+	# For each host.
+	for HOST_NUMBER in $(seq 0 19)
+	do
+
+		# For each configuration file.
+		for CONF_FILE in ${CONF_FILES}/*
+		do
+	
+			# Gets the old and new host IPs.
+			OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "${NET} ${HOST_NUMBER}" | \
+					tail -1 | sed -e "s/^[ \t]*//g" )
+			OLD_HOST_CONFIG=${OLD_HOST_CONFIG:="acl network_allowed src 127.0.0.255"}
+			${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
+			
+			# If the Intranet IP is valid.
+			NET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
+			if expr "${NET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null
+			then
+	
+				# Gets the new host configuration.		
+				NEW_HOST_CONFIG="acl network_allowed src ${NET_IP}"
+				NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
+				${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
+	
+				# If the old configuration is present and the new configuration is not present.
+				if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}") && \
+						! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}")
+				then
+					# Replaces them in the net file.
+					sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
+					
+					# If the IP has changed.
+					if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
+					then
+						# Sets that configuration has been updated.
+						CONFIG_UPDATED=true
+					fi
+				
+				# If the old configuration is not present.
+				else 
+					
+					# No old config is present.
+					${DEBUG} && echo "No old config present or new config already present."
+					
+				fi
+			
+			# If the Intranet IP is not valid.
+			else
+				${DEBUG} && echo "Invalid net IP: ${NET_IP}"
+			fi
+	
+		
+		done
+	
+	done
+
+done
 	
 # Reloads the configuration.
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"

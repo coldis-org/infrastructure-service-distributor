@@ -44,7 +44,7 @@ CONF_FILES=/usr/local/etc/haproxy/service
 
 # For each host.
 CONFIG_UPDATED=false
-for HOST_NUMBER in $(seq 0 9)
+for HOST_NUMBER in $(seq 0 19)
 do
 	
 	# For each configuration file.

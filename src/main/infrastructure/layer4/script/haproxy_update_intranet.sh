@@ -42,116 +42,84 @@ ${DEBUG} && echo "Running 'haproxy_update_intranet'"
 
 CONF_FILES=/usr/local/etc/haproxy/service
 
-# For each host.
+# For each available net.
 CONFIG_UPDATED=false
-for HOST_NUMBER in $(seq 0 19)
+for NET in $(echo ${AVAILABLE_NETS} | sed "s/,/ /g")
 do
-	
+
+
 	# For each configuration file.
 	for CONF_FILE in ${CONF_FILES}/*
 	do
 
-		# Gets the old and new host IPs.
-		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Intranet ${HOST_NUMBER}" | \
-				tail -1 | sed -e "s/^[ \t]*//g" )
-		OLD_HOST_CONFIG=${OLD_HOST_CONFIG:="acl network_allowed src 127.0.0.255"}
-		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
-		
-		# If the Intranet IP is valid.
-		INTRANET_IP=$( dig +short site${HOST_NUMBER}.${INTRANET_HOST_NAME} | tail -1 )
-		if expr "${INTRANET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null
-		then
+		${DEBUG} && echo "Configuring ${NET} on ${CONF_FILE}"
 
-			# Gets the new host configuration.		
-			NEW_HOST_CONFIG="acl network_allowed src ${INTRANET_IP}"
-			NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
-			${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
-
-			# If the old configuration is present and the new configuration is not present.
-			if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}") && \
-					! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}")
-			then
-				# Replaces them in the intranet file.
-				sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
-				
-				# If the IP has changed.
-				if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
-				then
-					# Sets that configuration has been updated.
-					CONFIG_UPDATED=true
-				fi
-			
-			# If the old configuration is not present.
-			else 
-				
-				# No old config is present.
-				${DEBUG} && echo "No old config present or new config already present."
-				
-			fi
-		
-		# If the Intranet IP is not valid.
-		else
-			${DEBUG} && echo "Invalid intranet IP: ${INTRANET_IP}"
-		fi
-
-	
-	done
-
-done
-
-# For each available net.
-for NET in $(echo ${AVAILABLE_NETS} | sed "s/,/ /g")
-do
-
-	# For each host.
-	for HOST_NUMBER in $(seq 0 19)
-	do
-
-		# For each configuration file.
-		for CONF_FILE in ${CONF_FILES}/*
+		# For each host.
+		for HOST_NUMBER in $(seq 0 49)
 		do
 	
 			# Gets the old and new host IPs.
-			OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "${NET} ${HOST_NUMBER}" | \
-					tail -1 | sed -e "s/^[ \t]*//g" )
-			OLD_HOST_CONFIG=${OLD_HOST_CONFIG:="acl network_allowed src 127.0.0.255"}
-			${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
+			OLD_ENTRY_CONFIG=$( cat ${CONF_FILE} | grep -A1 "${NET} ${HOST_NUMBER}\." | tail -1 | sed -e "s/^[ \t]*//g" )
+			OLD_ENTRY_CONFIG=${OLD_ENTRY_CONFIG:="acl network_allowed src 127.0.0.255"}
+			${DEBUG} && echo "Old entry config: ${OLD_ENTRY_CONFIG}"
 			
 			# If the Intranet IP is valid.
-			NET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
-			if expr "${NET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null
+			ENTRY_NAME="site${HOST_NUMBER}.${NET}.${HOST_NAME}"
+			NEW_ENTRY_IP=$( dig +short ${ENTRY_NAME} | tail -1 )
+			${DEBUG} && echo "Entry name: ${ENTRY_NAME}"
+			${DEBUG} && echo "New entry IP: ${NEW_ENTRY_IP}"
+			if expr "${NEW_ENTRY_IP}" : '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$' >/dev/null
 			then
 	
 				# Gets the new host configuration.		
-				NEW_HOST_CONFIG="acl network_allowed src ${NET_IP}"
-				NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
-				${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
+				NEW_ENTRY_CONFIG="acl network_allowed src ${NEW_ENTRY_IP}"
+				NEW_ENTRY_CONFIG=${NEW_ENTRY_CONFIG:=${OLD_ENTRY_CONFIG}}
+				${DEBUG} && echo "New entry config: ${NEW_ENTRY_CONFIG}"
 	
-				# If the old configuration is present and the new configuration is not present.
-				if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}") && \
-						! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}")
+				# If the IP has changed.
+				if [ "${OLD_ENTRY_CONFIG}" != "${NEW_ENTRY_CONFIG}" ]
 				then
-					# Replaces them in the net file.
-					sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
-					
-					# If the IP has changed.
-					if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
-					then
-						# Sets that configuration has been updated.
-						CONFIG_UPDATED=true
-					fi
 				
-				# If the old configuration is not present.
+					# If the old configuration is present.
+					if (cat ${CONF_FILE} | grep "${OLD_ENTRY_CONFIG}")
+					then
+					
+						# If the new configuration is not present.
+						if !(cat ${CONF_FILE} | grep "${NEW_ENTRY_CONFIG}")
+						then
+						
+							# Replaces them in the net file and sets the config as updated.
+							${DEBUG} && echo "Updating entry ${HOST_NUMBER} for ${NET} in ${CONF_FILE} to: ${NEW_ENTRY_CONFIG}"
+							sed -i "s/${OLD_ENTRY_CONFIG}/${NEW_ENTRY_CONFIG}/g" ${CONF_FILE}
+							CONFIG_UPDATED=true
+						
+						# If the new configuration is present.
+						else 
+	
+							# Logs it.						
+							${DEBUG} && echo "New entry config ${HOST_NUMBER} is already present for ${NET} in ${CONF_FILE}"
+							
+						fi
+						
+					# If the old configuration is not present.
+					else 
+					
+						# Logs it.						
+						${DEBUG} && echo "Old entry config ${HOST_NUMBER} is not present for ${NET} in ${CONF_FILE}"
+				
+					fi
+					
+				# If the IP has not changed.
 				else 
-					
-					# No old config is present.
-					${DEBUG} && echo "No old config present or new config already present."
-					
+				
+					# Logs it.						
+						${DEBUG} && echo "Entry config ${HOST_NUMBER} has not changed for ${NET} in ${CONF_FILE}"
+
 				fi
 			
 			# If the Intranet IP is not valid.
 			else
-				${DEBUG} && echo "Invalid net IP: ${NET_IP}"
+				${DEBUG} && echo "Invalid entry IP: ${NEW_ENTRY_IP}"
 			fi
 	
 		

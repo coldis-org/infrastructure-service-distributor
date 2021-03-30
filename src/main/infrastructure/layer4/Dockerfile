@@ -1,5 +1,5 @@
 # From HAProxy image.
-FROM haproxy:2.2.4
+FROM haproxy:2.3.7
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -63,5 +63,6 @@ ENV SERVICE_CONFIG_DIRECTORY=/usr/local/etc/haproxy/service
 RUN mkdir -p /usr/local/etc/haproxy/service
 
 # Entrypoint with multiple configuration directories.
-ENTRYPOINT [ "haproxy_init", "-f", "/usr/local/etc/haproxy", "-f", "/usr/local/etc/haproxy/service" ]
+ENTRYPOINT [ "haproxy_init" ]
+CMD [ "-W", "-f", "/usr/local/etc/haproxy", "-f", "/usr/local/etc/haproxy/service" ]
 

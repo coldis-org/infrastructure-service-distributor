@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=false
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 
 # For each argument.
@@ -61,8 +61,8 @@ do
 		${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 		
 		# If the old configuration is present and the new configuration is not present.
-		if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}") && \
-			! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}")
+		if (cat ${CONF_FILE} | grep "${OLD_HOST_CONFIG}" >/dev/null) && \
+			! (cat ${CONF_FILE} | grep "${NEW_HOST_CONFIG}" >/dev/null)
 		then
 		
 			# Replaces them in the intranet file.

@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=false
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 TEMP=/tmp
 CONFIG_DIR=/usr/local/etc/haproxy/service

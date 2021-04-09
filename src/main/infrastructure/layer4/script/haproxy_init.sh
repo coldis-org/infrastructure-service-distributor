@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default paramterers.
-DEBUG=false
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 HAPROXY_PARAMETERS=
 

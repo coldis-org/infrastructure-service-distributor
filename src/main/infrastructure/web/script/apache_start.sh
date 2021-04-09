@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=true
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 CMD=
 

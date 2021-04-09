@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=false
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 VHOSTS=/usr/local/apache2/conf/vhost
 

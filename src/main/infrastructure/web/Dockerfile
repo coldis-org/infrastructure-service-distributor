@@ -42,20 +42,6 @@ RUN apt-get update -y && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 	
-# Installs security rules.
-RUN apt-get update -y && \
-	apt-get install -y wget unzip dnsutils && \
-	mkdir -p /usr/local/apache2/conf/extra/crs && \
-	wget "https://github.com/coreruleset/coreruleset/archive/v3.3.0.zip" -O security.zip && \
-	unzip security.zip -d /usr/local/apache2/conf/extra/crs && \
-	rm -f security.zip && \
-	TMP_DIR=`ls /usr/local/apache2/conf/extra/crs` && \
-	mv /usr/local/apache2/conf/extra/crs/${TMP_DIR}/* /usr/local/apache2/conf/extra/crs/ && \
-	rm -R /usr/local/apache2/conf/extra/crs/${TMP_DIR} && \
-	apt-get remove -y wget unzip && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*
-
 # Copies configuration files.
 COPY config/ /usr/local/apache2/conf/
 

@@ -20,7 +20,7 @@ RUN apt-get update -y && \
 
 # Installs cron.	
 RUN apt-get update -y && \
-	apt-get install -y cron && \
+	apt-get install -y cron dnsutils && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 	

@@ -1,5 +1,5 @@
 # From Apache image.
-FROM httpd:2.4.46
+FROM httpd:2.4.48
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -18,6 +18,11 @@ RUN apt-get update -y && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 
+# User.
+ENV APACHE_USER=httpd
+RUN	groupadd ${APACHE_USER} && \
+	useradd ${APACHE_USER} -g ${APACHE_USER}
+
 # Installs cron.	
 RUN apt-get update -y && \
 	apt-get install -y cron dnsutils && \
@@ -33,16 +38,19 @@ RUN apt-get update -y && \
 	
 # Installs modules.
 RUN apt-get update -y && \
-	apt-get install -y libapache2-mod-security2 && \
+	apt-get install -y libapache2-mod-security2 apache2-utils && \
 	mkdir -p /var/log/apache2 && \
 	mkdir -p /var/cache/apache && \
-	mkdir -p /usr/local/apache2/static/ && \
+	mkdir -p /usr/local/apache2/static && \
+	chown ${APACHE_USER}:${APACHE_USER} -R /var/log/apache2 /var/cache/apache /usr/local/apache2/static && \
+	chmod 755 -R /var/log/apache2 /var/cache/apache /usr/local/apache2/static && \
 	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
 	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 	
 # Copies configuration files.
+RUN rm -Rf /usr/local/apache2/conf/extra/*.conf /usr/local/apache2/conf/mime /usr/local/apache2/conf/magic
 COPY config/ /usr/local/apache2/conf/
 
 # Copies the scripts.
@@ -62,11 +70,22 @@ RUN chmod -R 0644 /etc/cron.d/ && \
 
 # Sets static resources folder.
 COPY static/ /usr/local/apache2/htdocs/
-RUN chown www-data.www-data -R /usr/local/apache2/htdocs/
+RUN chown ${APACHE_USER}:${APACHE_USER} -R /usr/local/apache2/htdocs/
 
 # Hostname. Should be override.
 ENV HOST_NAME=localhost \
-	INTRANET_HOST_NAME=localhost	
+	INTRANET_HOST_NAME=localhost
+	
+# MPM config.
+ENV HTTPD_SERVER_LIMIT=48\
+	HTTPD_START_SERVERS=32\
+	HTTPD_MAX_CONNECTIONS_PER_CHILD=49237\
+	HTTPD_THREADS_PER_CHILD=96\
+	HTTPD_THREAD_LIMIT=96\
+	HTTPD_MIN_SPARE_THREADS=512\
+	HTTPD_MAX_SPARE_THREADS=4608\
+	HTTPD_MAX_REQUEST_WORKERS=4608\
+	HTTPD_MAX_MEM_FREE=1024
 
 # Command.
 ENTRYPOINT [ "apache_start" ]

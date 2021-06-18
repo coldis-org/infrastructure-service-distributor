@@ -46,8 +46,6 @@ trap - INT TERM
 
 # Prepares virtual host.
 VHOST=${VHOSTS}/${VHOST_NAME}.conf
-rm -rf ${VHOST}
-touch ${VHOST}
 
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'apache_add_vhost'"
@@ -55,20 +53,32 @@ ${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
 ${DEBUG} && echo "VHOST=${VHOST}"
 
 # Reads the input file line by line.
+rm -f ${VHOST}.tmp
 while read VHOST_LINE
 do
-	echo "${VHOST_LINE}" >> ${VHOST}
+	echo "${VHOST_LINE}" >> ${VHOST}.tmp
 done
-${DEBUG} && cat ${VHOST}
+${DEBUG} && cat ${VHOST}.tmp
 
-# If the config cannot be reloaded.
-${DEBUG} && echo "Reloading config"
-if ! /usr/local/apache2/bin/httpd -k graceful
+# Updates the file only if it has changed.
+touch ${VHOST}
+if !(diff -s ${VHOST} ${VHOST}.tmp)
 then
-	# Erases the virtual host config.
-	${DEBUG} && echo "Removing virtual host"
-	rm -rf ${VHOST}
-	/usr/local/apache2/bin/httpd -k graceful
-	exit "Virtual host config invalid"
+	# Changes the configuration.
+	rm ${VHOST}
+	mv ${VHOST}.tmp ${VHOST}
+	# If the config cannot be reloaded.
+	${DEBUG} && echo "Reloading config"
+	if ! /usr/local/apache2/bin/httpd -k graceful
+	then
+		# Erases the virtual host config.
+		${DEBUG} && echo "Removing virtual host"
+		rm -rf ${VHOST}
+		/usr/local/apache2/bin/httpd -k graceful
+		exit "Virtual host config invalid"
+	fi
+else 
+	echo "Config file '${VHOST}' has not changed. Skipping."
 fi
+
 

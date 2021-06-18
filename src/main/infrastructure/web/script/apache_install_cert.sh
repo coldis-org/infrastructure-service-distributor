@@ -49,6 +49,3 @@ ${DEBUG} && echo "DOMAINS=${DOMAINS}"
 # Installs the cert.
 certbot certonly --expand --webroot -w /usr/local/apache2/htdocs/ \
 	--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}
-
-# Reloads the configuration.
-/usr/local/apache2/bin/httpd -k graceful

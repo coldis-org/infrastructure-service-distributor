@@ -38,7 +38,7 @@ RUN apt-get update -y && \
 	
 # Installs modules.
 RUN apt-get update -y && \
-	apt-get install -y libapache2-mod-security2 apache2-utils && \
+	apt-get install -y libapache2-mod-security2 apache2-utils linux-libc-dev && \
 	mkdir -p /var/log/apache2 && \
 	mkdir -p /var/cache/apache && \
 	mkdir -p /usr/local/apache2/static && \

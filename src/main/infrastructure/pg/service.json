@@ -32,7 +32,13 @@
 		],
 		"docker": {
 			"image": "coldis/infrastructure-service-distributor-pg",
-			"forcePullImage": true
+			"forcePullImage": true,
+			"parameters": [
+				{
+					"key": "log-driver",
+					"value": "none"
+				}
+			]
 		}
 	},
 	"env": {
@@ -43,7 +49,7 @@
 		"CERT_L": "Rio de Janeiro",
 		"CERT_O": "Coldis",
 		"CERT_OU": "Technology",
-		"CERT_CN": "coldis.org",
+		"CERT_CN": "coldis.org"
 	},
 	"healthChecks": [],
 	"args": [],

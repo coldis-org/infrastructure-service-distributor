@@ -41,5 +41,5 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'apache_start_cache_cleaner'"
 
 # Starts the http cache clean job.
-htcacheclean -nti -d 30 -p /var/cache/apache -l 4000M -P /var/run/htcacheclean.pid
+htcacheclean -nti -d 30 -p /var/cache/apache2/mod_cache_disk -l 4000M -P /var/run/htcacheclean.pid
 

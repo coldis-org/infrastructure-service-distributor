@@ -40,10 +40,10 @@ RUN apt-get update -y && \
 RUN apt-get update -y && \
 	apt-get install -y libapache2-mod-security2 apache2-utils linux-libc-dev && \
 	mkdir -p /var/log/apache2 && \
-	mkdir -p /var/cache/apache && \
+	mkdir -p /var/cache/apache2/mod_cache_disk && \
 	mkdir -p /usr/local/apache2/static && \
-	chown ${APACHE_USER}:${APACHE_USER} -R /var/log/apache2 /var/cache/apache /usr/local/apache2/static && \
-	chmod 755 -R /var/log/apache2 /var/cache/apache /usr/local/apache2/static && \
+	chown ${APACHE_USER}:${APACHE_USER} -R /var/log/apache2 /var/cache/apache2/mod_cache_disk /usr/local/apache2/static && \
+	chmod 755 -R /var/log/apache2 /var/cache/apache2/mod_cache_disk /usr/local/apache2/static && \
 	cp /etc/modsecurity/unicode.mapping /usr/local/apache2/conf/extra/ && \
 	cp /usr/lib/apache2/modules/mod_security2.so /usr/local/apache2/modules/ && \
 	apt-get clean -y && \
@@ -77,19 +77,19 @@ ENV HOST_NAME=localhost \
 	INTRANET_HOST_NAME=localhost
 	
 # MPM config.
-ENV HTTPD_SERVER_LIMIT=237\
-	HTTPD_START_SERVERS=47\
-	HTTPD_MAX_CONNECTIONS_PER_CHILD=27929\
-	HTTPD_THREADS_PER_CHILD=19\
-	HTTPD_THREAD_LIMIT=53\
-	HTTPD_MIN_SPARE_THREADS=1753\
-	HTTPD_MAX_SPARE_THREADS=4047\
-	HTTPD_MAX_REQUEST_WORKERS=4047\
+ENV HTTPD_SERVER_LIMIT=19\
+	HTTPD_START_SERVERS=19\
+	HTTPD_MAX_CONNECTIONS_PER_CHILD=11927\
+	HTTPD_THREADS_PER_CHILD=47\
+	HTTPD_THREAD_LIMIT=59\
+	HTTPD_MIN_SPARE_THREADS=137\
+	HTTPD_MAX_SPARE_THREADS=893\
+	HTTPD_MAX_REQUEST_WORKERS=893\
 	HTTPD_THREAD_STACK_SIZE=16777216\
 	HTTPD_MAX_MEM_FREE=8092\
-	HTTPD_LISTEN_BACK_LOG=2047\
+	HTTPD_LISTEN_BACK_LOG=8191\
 	HTTPD_LISTEN_CORES_BUCKETS_RATIO=8\
-	HTTPD_GRACEFUL_SHUTDOWN_TIMEOUT=31\
+	HTTPD_GRACEFUL_SHUTDOWN_TIMEOUT=23\
 	HTTPD_SSL_SESSION_CACHE_SIZE=16777216\
 	HTTPD_SSL_STAPLING_CACHE_SIZE=8388608\
 	HTTPD_STATIC_FILES_EXTENSION=jpg|jpeg|gif|png|webp|ico|css|swf|eot|woff2|woff|svg|flv|js|js\.map|css|apk\

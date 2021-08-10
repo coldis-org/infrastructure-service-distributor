@@ -120,14 +120,24 @@ RUN apt-get update -y && \
 COPY cron /etc/cron.d
 RUN chmod -R 0644 /etc/cron.d/ && \
 	crontab /etc/cron.d/nginx_jobs
+	
+# Copies the scripts.
+RUN mkdir -p /opt/nginx-script
+COPY script /opt/nginx-script
+RUN chmod -R 755 /opt/nginx-script && \
+	ln -s /opt/nginx-script/*.sh /usr/bin && \
+	for FILE in /usr/bin/nginx*.sh; \
+	do \
+		mv -- "${FILE}" "${FILE%.sh}"; \
+	done
+
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* && \
-	mkdir -p /etc/nginx/vhost.d	
+	mkdir -p /etc/nginx/vhost.d
 
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
-COPY nginx-entrypoint /
 
 # Changes default permissions.
 RUN chgrp -R 0 /var/cache/nginx/ /var/log/ /var/run/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/ \
@@ -144,7 +154,7 @@ ENV	ACCESSLOG=/dev/null \
 	WORKER_CONNECTIONS=1024 \
 	MODSEC_AUDIT_LOG=Off
 
-ENTRYPOINT ["/nginx-entrypoint"]
+ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]
 
 

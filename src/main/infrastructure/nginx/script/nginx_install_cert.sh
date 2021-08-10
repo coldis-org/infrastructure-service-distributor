@@ -7,7 +7,7 @@ set -o errexit
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
-CMD=
+DOMAINS=
 
 # For each argument.
 while :; do
@@ -21,7 +21,7 @@ while :; do
 			
 		# Other option.
 		?*)
-			CMD="${CMD} ${1}"
+			DOMAINS="${DOMAINS} -d ${1}"
 			;;
 
 		# No more options.
@@ -32,17 +32,20 @@ while :; do
 	shift
 done
 
+# Unascape variables.
+DOMAINS=`eval "echo ${DOMAINS}"`
+
 # Using unavaialble variables should fail the script.
 set -o nounset
 
 # Enables interruption signal handling.
 trap - INT TERM
 
-# Starts cron.
-env > /etc/docker_env
-chmod +x /etc/docker_env
-service cron start
+# Print arguments if on debug mode.
+${DEBUG} && echo "Running 'nginx_add_vhost'"
+${DEBUG} && echo "DOMAINS=${DOMAINS}"
 
-# Runs the start command.
-${DEBUG} && echo "exec ${CMD}"
-exec ${CMD}
+
+# Installs the cert.
+certbot certonly --expand --webroot -w /usr/share/nginx/html \
+	--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}

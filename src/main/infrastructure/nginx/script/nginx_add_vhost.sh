@@ -7,7 +7,7 @@ set -o errexit
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
-VHOSTS=/usr/local/apache2/conf/vhost
+VHOSTS=/etc/nginx/vhost.d
 
 # For each argument.
 while :; do
@@ -48,7 +48,7 @@ trap - INT TERM
 VHOST=${VHOSTS}/${VHOST_NAME}.conf
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'apache_add_vhost'"
+${DEBUG} && echo "Running 'nginx_add_vhost'"
 ${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
 ${DEBUG} && echo "VHOST=${VHOST}"
 
@@ -69,12 +69,12 @@ then
 	mv ${VHOST}.tmp ${VHOST}
 	# If the config cannot be reloaded.
 	${DEBUG} && echo "Reloading config"
-	if ! /usr/local/apache2/bin/httpd -k graceful
+	if ! nginx -s reload
 	then
 		# Erases the virtual host config.
 		${DEBUG} && echo "Removing virtual host"
 		rm -rf ${VHOST}
-		/usr/local/apache2/bin/httpd -k graceful
+		nginx -s reload
 		exit "Virtual host config invalid"
 	fi
 else 

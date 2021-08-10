@@ -1,5 +1,10 @@
 #!/bin/sh -e
 
+# Starts cron.
+env > /etc/docker_env
+chmod +x /etc/docker_env
+service cron start
+
 export DNS_SERVER=${DNS_SERVER:-$(grep -i '^nameserver' /etc/resolv.conf |head -n1|cut -d ' ' -f2)}
 
 # Variables.

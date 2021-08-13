@@ -57,10 +57,10 @@ do
 	
 		# If the Intranet IP is valid.
 		NET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
-		if expr "${NET_IP}" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+		if expr "${NET_IP}" : '^[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
 		
 			# Gets the new host configuration.		
-			NEW_HOST_CONFIG="allow ${NET_IP}"
+			NEW_HOST_CONFIG="allow ${NET_IP};"
 			NEW_HOST_CONFIG=${NEW_HOST_CONFIG:=${OLD_HOST_CONFIG}}
 			${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 			
@@ -100,6 +100,7 @@ done
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
+	nginx_variables
 	nginx -s reload
 fi
 

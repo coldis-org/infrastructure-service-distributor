@@ -143,15 +143,17 @@ COPY config/nginx /etc/nginx
 RUN chgrp -R 0 /var/cache/nginx/ /var/log/ /var/run/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/ \
 	&& chmod -R g=u /var/cache/nginx/ /var/log/ /var/run/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
-ENV	ACCESSLOG=/dev/null \
-	ERRORLOG=/dev/stderr \
-	METRICSLOG=/dev/stdout \
-	LOGLEVEL=warn \
-	DNS_SERVER= \
-	PROXY_TIMEOUT=60s \
-	TIMEOUT=60s \
-	SERVER_NAME=localhost \
-	WORKER_CONNECTIONS=1024 \
+ENV	CERTBOT_PORT=80\
+	ACCESSLOG=/dev/null\
+	ERRORLOG=/dev/stderr\
+	METRICSLOG=/dev/stdout\
+	LOG_BUFFER=512k\
+	LOGLEVEL=warn\
+	DNS_SERVER=\
+	PROXY_TIMEOUT=57s\
+	TIMEOUT=57s\
+	SERVER_NAME=localhost\
+	WORKER_CONNECTIONS=1024\
 	MODSEC_AUDIT_LOG=Off
 
 ENTRYPOINT ["nginx_entrypoint"]

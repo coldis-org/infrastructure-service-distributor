@@ -1,5 +1,5 @@
 {
-	"id": "/infrastructure-service-distributor-web",
+	"id": "/infrastructure-service-distributor-nginx",
 	"instances": 1,
 	"cpus": 0.5,
 	"disk": 200,
@@ -23,10 +23,10 @@
 		"type": "DOCKER",
 		"volumes": [
 			{
-				"containerPath": "/usr/local/apache2/conf/vhost",
+				"containerPath": "/etc/nginx/vhost.d",
 				"mode": "RW",
 				"external": {
-					"name": "infrastructure-service-distributor-web",
+					"name": "infrastructure-service-distributor-nginx-vhost",
 					"provider": "dvdi",
 					"options": {
 						"dvdi/driver": "rexray"
@@ -37,7 +37,7 @@
 				"containerPath": "/etc/letsencrypt",
 				"mode": "RW",
 				"external": {
-					"name": "infrastructure-service-distributor-cert",
+					"name": "infrastructure-service-distributor-nginx-cert",
 					"provider": "dvdi",
 					"options": {
 						"dvdi/driver": "rexray"
@@ -46,7 +46,7 @@
 			}
 		],
 		"docker": {
-			"image": "coldis/infrastructure-service-distributor-web",
+			"image": "coldis/infrastructure-service-distributor-nginx",
 			"forcePullImage": true
 		}
 	},

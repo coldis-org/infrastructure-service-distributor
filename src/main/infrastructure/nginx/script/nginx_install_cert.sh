@@ -47,5 +47,5 @@ ${DEBUG} && echo "DOMAINS=${DOMAINS}"
 
 
 # Installs the cert.
-certbot certonly --expand --webroot -w /usr/share/nginx/html \
+certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
 	--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}

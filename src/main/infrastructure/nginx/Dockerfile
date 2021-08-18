@@ -134,7 +134,7 @@ RUN chmod -R 755 /opt/nginx-script && \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* && \
-	mkdir -p /etc/nginx/vhost.d
+	mkdir -p /etc/nginx/vhost.d /data/nginx/cache
 
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
@@ -152,7 +152,7 @@ ENV	CERTBOT_PORT=80\
 	DNS_SERVER=\
 	TIMEOUT=3m\
 	SERVER_NAME=localhost\
-	WORKER_CONNECTIONS=1024\
+	WORKER_CONNECTIONS=2048\
 	MODSEC_AUDIT_LOG=Off
 
 ENTRYPOINT ["nginx_entrypoint"]

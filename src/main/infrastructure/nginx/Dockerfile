@@ -113,6 +113,7 @@ RUN apt-get update -y && \
 RUN apt-get update -y && \
 	apt-get install -y certbot python-certbot-nginx && \
 	(certbot certonly --non-interactive --agree-tos || true) && \
+	openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096 && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 

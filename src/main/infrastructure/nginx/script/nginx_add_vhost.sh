@@ -70,15 +70,7 @@ then
 	# If the config cannot be reloaded.
 	${DEBUG} && echo "Reloading config"
 	nginx_variables
-	if ! nginx -s reload
-	then
-		# Erases the virtual host config.
-		${DEBUG} && echo "Removing virtual host"
-		rm -rf ${VHOST}
-		nginx_variables
-		nginx -s reload
-		exit "Virtual host config invalid"
-	fi
+	nginx -s reload
 else 
 	echo "Config file '${VHOST}' has not changed. Skipping."
 fi

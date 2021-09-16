@@ -22,6 +22,11 @@ RUN apt-get update \
 	ruby \
 	wget \
 	zlib1g-dev \
+	libpcre3 \
+	libpcre3-dev \
+	unzip \
+	uuid-dev \
+	build-essential \
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -41,6 +46,18 @@ RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/rele
 	&& ./configure \
 	&& make install
 
+# pagespeed
+ARG NPS_VERSION=1.13.35.2
+RUN wget --quiet https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz && \
+	tar -xvzf v1.13.35.2-stable.tar.gz && \
+	mv *pagespeed-ngx* pagespeed-nginx && \
+	cd pagespeed-nginx && \
+	wget --quiet https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz && \
+	tar -xvzf ${NPS_VERSION}-x64.tar.gz 
+
+# vts
+RUN git clone git://github.com/vozlt/nginx-module-vts.git
+
 RUN git clone https://github.com/SpiderLabs/ModSecurity --branch v${MODSEC_VERSION} --depth 1 \
 	&& cd ModSecurity \
 	&& ./build.sh \
@@ -54,9 +71,11 @@ RUN git clone -b master --depth 1 https://github.com/SpiderLabs/ModSecurity-ngin
 	&& wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
 	&& tar -xzf nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-compat --add-dynamic-module=../ModSecurity-nginx \
+	&& ./configure --with-compat --add-dynamic-module=../ModSecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
 	&& make modules \
 	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
+	&& cp objs/ngx_pagespeed.so /etc/nginx/modules/ \
+	&& cp objs/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/\
 	&& mkdir /etc/modsecurity.d \
 	&& wget --quiet https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/unicode.mapping \
 	-O /etc/modsecurity.d/unicode.mapping
@@ -84,6 +103,8 @@ COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
 COPY --from=build /usr/local/lib/ /usr/local/lib/
 COPY --from=build /etc/nginx/modules/ngx_http_modsecurity_module.so /etc/nginx/modules/ngx_http_modsecurity_module.so
 COPY --from=build /etc/modsecurity.d/unicode.mapping /etc/modsecurity.d/unicode.mapping
+COPY --from=build /etc/nginx/modules/ngx_pagespeed.so /etc/nginx/modules/ngx_pagespeed.so
+COPY --from=build /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -131,7 +152,6 @@ RUN chmod -R 755 /opt/nginx-script && \
 	do \
 		mv -- "${FILE}" "${FILE%.sh}"; \
 	done
-
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* && \

@@ -1,9 +1,9 @@
 # From Nginx image.
-ARG NGINX_VERSION="1.20.1"
+ARG NGINX_VERSION="1.21.3"
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
-ARG MODSEC_VERSION=3.0.5
+ARG MODSEC_VERSION=3.0.6
 
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \

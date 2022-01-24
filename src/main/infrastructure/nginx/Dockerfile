@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION="1.21.3"
+ARG NGINX_VERSION="1.21.5"
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -132,7 +132,7 @@ RUN apt-get update -y && \
 
 # Installs certbot.
 RUN apt-get update -y && \
-	apt-get install -y certbot python-certbot-nginx && \
+	apt-get install -y certbot python3-certbot-nginx && \
 	(certbot certonly --non-interactive --agree-tos || true) && \
 	openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096 && \
 	apt-get clean -y && \

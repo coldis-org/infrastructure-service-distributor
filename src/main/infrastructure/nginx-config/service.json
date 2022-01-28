@@ -1,0 +1,67 @@
+{
+	"id": "/infrastructure-service-distributor-nginx",
+	"instances": 1,
+	"cpus": 0.5,
+	"disk": 200,
+	"mem": 256,
+	"networks": [
+		{
+			"mode": "container/bridge"
+		}
+	],
+	"container": {
+		"portMappings": [
+			{
+				"containerPort": 80,
+				"hostPort": 80
+			},
+			{
+				"containerPort": 443,
+				"hostPort": 443
+			}
+		],
+		"type": "DOCKER",
+		"volumes": [
+			{
+				"containerPath": "/etc/nginx/vhost.d",
+				"mode": "RW",
+				"external": {
+					"name": "infrastructure-service-distributor-nginx-vhost",
+					"provider": "dvdi",
+					"options": {
+						"dvdi/driver": "rexray"
+					}
+				}
+			},
+			{
+				"containerPath": "/etc/letsencrypt",
+				"mode": "RW",
+				"external": {
+					"name": "infrastructure-service-distributor-nginx-cert",
+					"provider": "dvdi",
+					"options": {
+						"dvdi/driver": "rexray"
+					}
+				}
+			}
+		],
+		"docker": {
+			"image": "coldis/infrastructure-service-distributor-nginx",
+			"forcePullImage": true
+		}
+	},
+	"env": {
+		"HOSTNAME": "coldis.org",
+		"INTRANET_IP": "127.0.0.1",
+		"AVAILABLE_NETS": "developernet,intranet,extranet"
+	},
+	"healthChecks": [],
+	"args": [],
+	"acceptedResourceRoles": [
+		"slave_public"
+	],
+	"upgradeStrategy": {
+		"minimumHealthCapacity": 0,
+		"maximumOverCapacity": 0
+	}
+}

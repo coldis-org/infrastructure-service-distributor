@@ -126,7 +126,7 @@ RUN apt-get update -y && \
 
 # Installs cron.
 RUN apt-get update -y && \
-	apt-get install -y cron dnsutils && \
+	apt-get install -y cron dnsutils wget && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -168,12 +168,15 @@ ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
-	LOG_BUFFER=117k\
+	LOG_BUFFER=5m\
+	LOG_FLUSH=11s\
 	LOGLEVEL=warn\
 	DNS_SERVER=\
 	TIMEOUT=3m\
 	SERVER_NAME=localhost\
-	WORKER_CONNECTIONS=4096\
+	PROCESSES=auto\
+	WORKER_CONNECTIONS=32767\
+	THREADS=1023\
 	MODSEC_AUDIT_LOG=Off
 
 ENTRYPOINT ["nginx_entrypoint"]

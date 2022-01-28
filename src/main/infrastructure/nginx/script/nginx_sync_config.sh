@@ -50,17 +50,18 @@ if [ ! -z "${CONF_HOST_NAME}" ]
 then
 
 	# Downloads data.
-	wget --recursive --no-parent -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
-	wget --recursive --no-parent -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
+	rm -rf ${VHOSTS_TMP}/* ${CERTS_TMP}/*
+	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
+	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	
-	if ! diff ${VHOSTS} ${VHOSTS_TMP}
+	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
 		nginx -s reload
 	fi
 
-	if ! diff ${CERTS} ${CERTS_TMP}
+	if ! diff -q ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/

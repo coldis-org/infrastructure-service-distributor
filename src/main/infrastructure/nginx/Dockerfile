@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION="1.21.5"
+ARG NGINX_VERSION=1.21.6
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -82,7 +82,6 @@ RUN git clone -b master --depth 1 https://github.com/SpiderLabs/ModSecurity-ngin
 
 # From Nginx.
 FROM nginx:${NGINX_VERSION}
-ARG MODSEC_VERSION=3.0.5
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -175,7 +174,8 @@ ENV	CERTBOT_PORT=80\
 	TIMEOUT=3m\
 	SERVER_NAME=localhost\
 	PROCESSES=auto\
-	WORKER_CONNECTIONS=32767\
+	CONNECTIONS=32767\
+	AIO_REQUESTS=1023\
 	THREADS=511\
 	MODSEC_AUDIT_LOG=Off
 

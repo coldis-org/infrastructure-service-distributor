@@ -46,7 +46,7 @@ ${DEBUG} && echo "Running 'nginx_sync_config'"
 
 
 # If host config should be syncd.
-if [ ! -z "${CONF_HOST_NAME}" ]
+if [ ! -z "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
 	# Downloads data.
@@ -54,17 +54,17 @@ then
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	
-	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
-	then
-		rm -rf ${VHOSTS}/*
-		mv ${VHOSTS_TMP}/* ${VHOSTS}/
-		nginx -s reload
-	fi
-
 	if ! diff -q ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
+		nginx -s reload
+	fi
+
+	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
+	then
+		rm -rf ${VHOSTS}/*
+		mv ${VHOSTS_TMP}/* ${VHOSTS}/
 		nginx -s reload
 	fi
 

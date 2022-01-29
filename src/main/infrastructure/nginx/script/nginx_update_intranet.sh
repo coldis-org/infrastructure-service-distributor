@@ -51,7 +51,7 @@ do
 	do
 	
 		# Gets the old and new host IPs.
-		CONF_FILE=/etc/nginx/conf.d/access-${NET}.conf
+		CONF_FILE=/etc/nginx/conf.d/include.d/access-${NET}.conf
 		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Entry ${HOST_NUMBER}\." | grep "allow" | sed "s/^[ \t]*//g" )
 		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
 	

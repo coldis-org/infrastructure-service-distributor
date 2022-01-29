@@ -8,6 +8,7 @@ set -o errexit
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 DOMAINS=
+SELF_SIGNED=false
 
 # For each argument.
 while :; do
@@ -17,6 +18,11 @@ while :; do
 		--debug)
 			DEBUG=true
 			DEBUG_OPT="--debug"
+			;;
+			
+		# Self signed.
+		--self-signed)
+			SELF_SIGNED=true
 			;;
 			
 		# Other option.
@@ -47,5 +53,11 @@ ${DEBUG} && echo "DOMAINS=${DOMAINS}"
 
 
 # Installs the cert.
-certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
-	--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}
+if [ "${SELF_SIGNED}" = "true" ]
+then
+	CERT_FOLDER="/etc/letsecnrypt/selfsigned/$(echo ${DOMAINS} | sed 's/.*CN=//g')"
+	openssl req -new -x509 -sha256 -newkey rsa:2048 -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}"
+else 
+	certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
+		--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}
+fi

@@ -27,7 +27,12 @@ while :; do
 			
 		# Other option.
 		?*)
-			DOMAINS="${DOMAINS} -d ${1}"
+			if [ "${SELF_SIGNED}" = "true" ]
+			then
+				DOMAINS="${DOMAINS} ${1}"
+			else 
+				DOMAINS="${DOMAINS} -d ${1}"
+			fi
 			;;
 
 		# No more options.
@@ -55,8 +60,17 @@ ${DEBUG} && echo "DOMAINS=${DOMAINS}"
 # Installs the cert.
 if [ "${SELF_SIGNED}" = "true" ]
 then
-	CERT_FOLDER="/etc/letsecnrypt/selfsigned/$(echo ${DOMAINS} | sed 's/.*CN=//g')"
-	openssl req -new -x509 -sha256 -newkey rsa:2048 -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}"
+	DOMAIN="$(echo ${DOMAINS} | sed 's/.*CN=//g')"
+	CERT_FOLDER="/etc/letsencrypt/selfsigned/${DOMAIN}"
+	mkdir -p ${CERT_FOLDER}
+	if [ ! -f ${CERT_FOLDER}/key.pem ] || [ ! -f ${CERT_FOLDER}/cert.pem ]
+	then
+		CERT_CONF="/tmp/${DOMAIN}-cert.conf"
+		cat /etc/ssl/openssl.cnf > ${CERT_CONF}
+		echo "[SAN]\nsubjectAltName=DNS:${DOMAIN}" >> ${CERT_CONF}
+		openssl req -newkey rsa:4096 -new -x509 -sha256 -reqexts SAN -extensions SAN -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}" -config ${CERT_CONF}
+		rm ${CERT_CONF}
+	fi
 else 
 	certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
 		--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}

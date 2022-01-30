@@ -50,7 +50,8 @@ if [ ! -z "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
 	# Downloads data.
-	rm -rf ${VHOSTS_TMP}/* ${CERTS_TMP}/*
+	rm -rf ${VHOSTS_TMP}/* 
+	rm -rf ${CERTS_TMP}/*
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	

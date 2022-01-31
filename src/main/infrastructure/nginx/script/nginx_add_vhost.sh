@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=${DEBUG:=false}
+DEBUG=${DEBUG:=true}
 DEBUG_OPT=
 VHOSTS=/etc/nginx/vhost.d
 
@@ -25,6 +25,10 @@ while :; do
 			shift
 			;;
 
+        -d|--directory)
+			VHOSTS=${2}
+			shift
+			;;
 		# Other option.
 		?*)
 			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
@@ -74,5 +78,3 @@ then
 else 
 	echo "Config file '${VHOST}' has not changed. Skipping."
 fi
-
-

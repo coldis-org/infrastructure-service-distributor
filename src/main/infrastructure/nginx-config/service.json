@@ -43,6 +43,17 @@
 						"dvdi/driver": "rexray"
 					}
 				}
+			},
+			{
+				"containerPath": "/etc/nginx/stream",
+				"mode": "RW",
+				"external": {
+					"name": "infrastructure-service-distributor-nginx-stream",
+					"provider": "dvdi",
+					"options": {
+						"dvdi/driver": "rexray"
+					}
+				}
 			}
 		],
 		"docker": {

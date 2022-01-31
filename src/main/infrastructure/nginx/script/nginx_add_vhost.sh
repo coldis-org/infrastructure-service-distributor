@@ -5,7 +5,7 @@ set -o errexit
 #set -o pipefail
 
 # Default parameters.
-DEBUG=${DEBUG:=true}
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 VHOSTS=/etc/nginx/vhost.d
 

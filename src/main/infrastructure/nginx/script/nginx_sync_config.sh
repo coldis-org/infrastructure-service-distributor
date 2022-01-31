@@ -9,8 +9,10 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 VHOSTS=/etc/nginx/vhost.d
 CERTS=/etc/letsencrypt
+STREAM=/etc/stream
 VHOSTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/vhost
 CERTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/cert
+STREAM_TMP=/tmp/nginx/${CONF_HOST_NAME}/stream
 
 # For each argument.
 while :; do
@@ -52,9 +54,12 @@ then
 	# Downloads data.
 	rm -rf ${VHOSTS_TMP}/* 
 	rm -rf ${CERTS_TMP}/*
+	rm -rf ${STREAM_TMP}/*
+	
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
-	
+	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
+
 	if ! diff -q ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
@@ -66,6 +71,13 @@ then
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
+		nginx -s reload
+	fi
+	
+	if ! diff -q ${STREAM} ${STREAM_TMP}
+	then
+		rm -rf ${STREAM}/*
+		mv ${STREAM_TMP}/* ${STREAM}/
 		nginx -s reload
 	fi
 

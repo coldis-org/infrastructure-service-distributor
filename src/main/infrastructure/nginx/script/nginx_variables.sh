@@ -1,6 +1,9 @@
 #!/bin/sh -e
 
-export DNS_SERVER=${DNS_SERVER:-$(grep -i '^nameserver' /etc/resolv.conf |head -n1|cut -d ' ' -f2)}
+if [ "${DNS_SERVER}" = "" ]
+then
+	export DNS_SERVER=${DNS_SERVER:-$(grep -i '^nameserver' /etc/resolv.conf |head -n1|cut -d ' ' -f2)}
+fi
 
 # Variables.
 ENV_VARIABLES=$(awk 'BEGIN{for(v in ENVIRON) print "$"v}')

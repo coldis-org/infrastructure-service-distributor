@@ -8,8 +8,8 @@ set -o errexit
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 VHOSTS=/etc/nginx/vhost.d
+STREAM=/etc/nginx/stream.d
 CERTS=/etc/letsencrypt
-STREAM=/etc/stream
 VHOSTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/vhost
 CERTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/cert
 STREAM_TMP=/tmp/nginx/${CONF_HOST_NAME}/stream

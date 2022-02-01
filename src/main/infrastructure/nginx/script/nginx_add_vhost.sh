@@ -25,7 +25,7 @@ while :; do
 			shift
 			;;
 
-        -d|--directory)
+		-d|--directory)
 			VHOSTS=${2}
 			shift
 			;;

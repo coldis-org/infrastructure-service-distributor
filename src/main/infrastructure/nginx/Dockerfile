@@ -142,9 +142,6 @@ COPY cron /etc/cron.d
 RUN chmod -R 0644 /etc/cron.d/ && \
 	crontab /etc/cron.d/nginx_jobs
 
-# Create folder for TCP entries
-RUN mkdir -p /etc/nginx/stream
-
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
 COPY script /opt/nginx-script
@@ -157,7 +154,7 @@ RUN chmod -R 755 /opt/nginx-script && \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* && \
-	mkdir -p /etc/nginx/vhost.d /data/nginx/cache
+	mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /data/nginx/cache
 
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx

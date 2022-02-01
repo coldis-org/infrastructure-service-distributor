@@ -8,7 +8,8 @@ service cron start
 # Creates client certificates.
 nginx_install_cert --self-signed "/C=BR/ST=SaoPaulo/L=SaoPaulo/O=SuperSim/OU=Com/OU=Br/CN=client"
 
-# Replaces variables in config files.
+# Sync config.
+nginx_sync_config --no-reload
 nginx_variables
 
 # Runs original command.

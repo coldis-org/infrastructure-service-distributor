@@ -7,6 +7,7 @@ set -o errexit
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
+NO_RELOAD=false
 VHOSTS=/etc/nginx/vhost.d
 STREAM=/etc/nginx/stream.d
 CERTS=/etc/letsencrypt
@@ -22,6 +23,11 @@ while :; do
 		--debug)
 			DEBUG=true
 			DEBUG_OPT="--debug"
+			;;
+
+		# If no reload should be performed.
+		--no-reload)
+			NO_RELOAD=true
 			;;
 			
 		# Other option.
@@ -64,21 +70,21 @@ then
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
-		nginx -s reload
+		${NO_RELOAD} || nginx -s reload
 	fi
 
 	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
-		nginx -s reload
+		${NO_RELOAD} || nginx -s reload
 	fi
 	
 	if ! diff -q ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
-		nginx -s reload
+		${NO_RELOAD} || nginx -s reload
 	fi
 
 fi

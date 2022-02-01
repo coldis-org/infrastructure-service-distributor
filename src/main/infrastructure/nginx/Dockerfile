@@ -178,7 +178,7 @@ ENV	CERTBOT_PORT=80\
 	AIO_REQUESTS=8191\
 	THREADS=1023\
 	MODSEC_AUDIT_LOG=Off\
-	NO_CERT_RENEW=false
+	NO_CERT_RENEW=true
 
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

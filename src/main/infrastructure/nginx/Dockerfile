@@ -141,7 +141,10 @@ RUN apt-get update -y && \
 COPY cron /etc/cron.d
 RUN chmod -R 0644 /etc/cron.d/ && \
 	crontab /etc/cron.d/nginx_jobs
-	
+
+# Create folder for TCP entries
+RUN mkdir -p /etc/nginx/stream
+
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
 COPY script /opt/nginx-script

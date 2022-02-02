@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Default script behavior.
-set -o errexit
 #set -o pipefail
 
 # Default parameters.
@@ -57,7 +56,7 @@ ${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
 ${DEBUG} && echo "VHOST=${VHOST}"
 
 # Reads the input file line by line.
-rm -f ${VHOST}.tmp
+rm -f ${VHOST}.old ${VHOST}.tmp
 while read VHOST_LINE
 do
 	echo "${VHOST_LINE}" >> ${VHOST}.tmp
@@ -69,12 +68,19 @@ touch ${VHOST}
 if !(diff -s ${VHOST} ${VHOST}.tmp)
 then
 	# Changes the configuration.
-	rm ${VHOST}
+	mv ${VHOST} ${VHOST}.old
 	mv ${VHOST}.tmp ${VHOST}
 	# If the config cannot be reloaded.
 	${DEBUG} && echo "Reloading config"
 	nginx_variables
-	nginx -s reload
+	if nginx_check_config
+	then
+		rm -f ${VHOST}.old
+	else 
+		rm ${VHOST}
+		mv ${VHOST}.old ${VHOST} || true
+		nginx_check_config
+	fi
 else 
 	echo "Config file '${VHOST}' has not changed. Skipping."
 fi

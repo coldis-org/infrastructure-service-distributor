@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Default script behavior.
-set -o errexit
 #set -o pipefail
 
 # Default parameters.
@@ -101,7 +100,7 @@ ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
 	nginx_variables
-	nginx -s reload
+	nginx_check_config
 fi
 
 

@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Default script behavior.
-set -o errexit
 #set -o pipefail
 
 # Default parameters.
@@ -54,7 +53,7 @@ ${DEBUG} && echo "Running 'nginx_sync_config'"
 
 
 # If host config should be syncd.
-if [ ! -z "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
+if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
 	# Downloads data.
@@ -70,21 +69,21 @@ then
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
-		${NO_RELOAD} || nginx -s reload
+		${NO_RELOAD} || nginx_check_config
 	fi
 
 	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
-		${NO_RELOAD} || nginx -s reload
+		${NO_RELOAD} || nginx_check_config
 	fi
 	
 	if ! diff -q ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
-		${NO_RELOAD} || nginx -s reload
+		${NO_RELOAD} || nginx_check_config
 	fi
 
 fi

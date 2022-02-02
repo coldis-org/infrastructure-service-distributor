@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # Default script behavior.
-set -o errexit
 #set -o pipefail
 
 # Default parameters.

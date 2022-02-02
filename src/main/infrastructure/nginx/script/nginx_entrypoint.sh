@@ -11,7 +11,7 @@ service cron start
 
 # Sync config.
 nginx_sync_config --no-reload
-nginx_variables
+nginx_check_config --no-reload
 
 # Runs original command.
 exec "$@"

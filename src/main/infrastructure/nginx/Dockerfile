@@ -32,7 +32,7 @@ RUN apt-get update \
 
 WORKDIR /sources
 
-RUN git clone https://github.com/LMDB/lmdb --branch LMDB_0.9.23 --depth 1 \
+RUN git clone https://github.com/LMDB/lmdb --branch LMDB_0.9.29 --depth 1 \
 	&& make -C lmdb/libraries/liblmdb install
 
 RUN git clone https://github.com/lloyd/yajl --branch 2.1.0 --depth 1 \
@@ -49,7 +49,7 @@ RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/rele
 # pagespeed
 ARG NPS_VERSION=1.13.35.2
 RUN wget --quiet https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz && \
-	tar -xvzf v1.13.35.2-stable.tar.gz && \
+	tar -xvzf v${NPS_VERSION}-stable.tar.gz && \
 	mv *pagespeed-ngx* pagespeed-nginx && \
 	cd pagespeed-nginx && \
 	wget --quiet https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz && \
@@ -154,31 +154,32 @@ RUN chmod -R 755 /opt/nginx-script && \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* && \
-	mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /data/nginx/cache
+	mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /var/cache/pagespeed
 
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
 
 # Changes default permissions.
-RUN chgrp -R 0 /var/cache/nginx/ /var/log/ /var/run/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/ \
-	&& chmod -R g=u /var/cache/nginx/ /var/log/ /var/run/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
+RUN chown -R nginx /var/cache/nginx/ /var/cache/pagespeed/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
 ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
 	LOG_BUFFER=256k\
-	LOG_FLUSH=11s\
+	LOG_FLUSH=17s\
 	LOGLEVEL=warn\
 	DNS_SERVER=\
+	CONNECTION_TIMEOUT=11s\
 	TIMEOUT=1m\
 	SERVER_NAME=localhost\
 	PROCESSES=auto\
 	CONNECTIONS=65535\
 	AIO_REQUESTS=8191\
-	THREADS=1023\
+	THREADS=512\
 	MODSEC_AUDIT_LOG=Off\
-	NO_CERT_RENEW=true
+	NO_CERT_RENEW=true\
+	CONF_HOST_NAME=localhost
 
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

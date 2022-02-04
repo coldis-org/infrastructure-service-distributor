@@ -11,6 +11,9 @@ service cron start
 
 # Sync config.
 nginx_sync_config --no-reload
+nginx_variables
+nginx_variables
+nginx_update_intranet
 nginx_check_config --no-reload
 
 # Runs original command.

@@ -71,7 +71,7 @@ RUN git clone -b master --depth 1 https://github.com/SpiderLabs/ModSecurity-ngin
 	&& wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
 	&& tar -xzf nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-compat --add-dynamic-module=../ModSecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
+	&& ./configure --with-debug --with-compat --add-dynamic-module=../ModSecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
 	&& make modules \
 	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
 	&& cp objs/ngx_pagespeed.so /etc/nginx/modules/ \
@@ -133,7 +133,7 @@ RUN apt-get update -y && \
 RUN apt-get update -y && \
 	apt-get install -y certbot python3-certbot-nginx && \
 	(certbot certonly --non-interactive --agree-tos || true) && \
-	openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096 && \
+	openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048 && \
 	apt-get clean -y && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -166,15 +166,15 @@ ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
-	LOG_BUFFER=256k\
+	LOG_BUFFER=64k\
 	LOG_FLUSH=17s\
-	LOGLEVEL=warn\
+	LOG_LEVEL=warn\
 	DNS_SERVER=\
 	CONNECTION_TIMEOUT=11s\
-	TIMEOUT=1m\
+	TIMEOUT=45s\
 	SERVER_NAME=localhost\
 	PROCESSES=auto\
-	CONNECTIONS=65535\
+	CONNECTIONS=131070\
 	AIO_REQUESTS=8191\
 	THREADS=512\
 	MODSEC_AUDIT_LOG=Off\

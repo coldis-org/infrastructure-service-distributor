@@ -42,19 +42,21 @@ ${DEBUG} && nginx -t || true
 NGINX_TEST="$( nginx -t 2>&1 )"
 ${DEBUG} && echo "NGINX_TEST=${NGINX_TEST}"
 NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
-${DEBUG} && echo "NGINX_ERROR=${NGINX_ERROR}"
 CONFIG_VALID=true
+LAST_NGINX_ERROR_FILE=
 while [ ! -z "${NGINX_ERROR}" ]
 do
 	CONFIG_VALID=false
+	echo "NGINX_ERROR=${NGINX_ERROR}"
 	# Removes files with errors.
 	NGINX_ERROR_FILE=$(echo ${NGINX_ERROR} | sed -e "s/.*\[emerg\]//g" -e "s/[^\/]* \//\//" -e "s/[: ].*//g")
 	# If it is the main file, breaks.
-	if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ]
+	if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ] || [ "${LAST_NGINX_ERROR_FILE}" = "${NGINX_ERROR_FILE}" ]
 	then
 		echo "Main file with error. Nothing to do."
 		break
 	fi
+	LAST_NGINX_ERROR_FILE=${NGINX_ERROR_FILE}
 	echo "Moving file ${NGINX_ERROR_FILE} to ${NGINX_ERROR_FILE}.err"
 	rm -f ${NGINX_ERROR_FILE}.err
 	mv ${NGINX_ERROR_FILE} ${NGINX_ERROR_FILE}.err

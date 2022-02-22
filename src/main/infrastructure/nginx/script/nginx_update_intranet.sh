@@ -17,6 +17,12 @@ while :; do
 			DEBUG_OPT="--debug"
 			;;
 			
+		# If actual reload should be done.
+		--no-reload)
+			SKIP_RELOAD=true
+			SKIP_RELOAD_PARAM="--no-reload"
+			;;
+			
 		# Other option.
 		?*)
 			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
@@ -99,8 +105,8 @@ done
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
-	nginx_variables
-	nginx_check_config
+	nginx_variables ${SKIP_RELOAD_PARAM}
+	nginx_check_config ${SKIP_RELOAD_PARAM}
 fi
 
 

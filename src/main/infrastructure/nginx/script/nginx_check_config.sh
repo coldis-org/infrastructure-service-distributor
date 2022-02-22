@@ -18,9 +18,10 @@ while :; do
 			DEBUG_OPT="--debug"
 			;;
 			
-		# If actual reload should be noed.
+		# If actual reload should be done.
 		--no-reload)
 			SKIP_RELOAD=true
+			SKIP_RELOAD_PARAM="--no-reload"
 			;;
 			
 		# No more options.
@@ -86,7 +87,7 @@ do
 done
 
 # Reloads config.
-${SKIP_RELOAD} || nginx_variables
+${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
 ${SKIP_RELOAD} || nginx -s reload
 
 if ${CONFIG_VALID}

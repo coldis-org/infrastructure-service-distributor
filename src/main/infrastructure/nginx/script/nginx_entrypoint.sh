@@ -10,11 +10,10 @@ chmod +x /etc/docker_env
 service cron start
 
 # Sync config.
-nginx_sync_config --no-reload
-nginx_variables
-nginx_variables
-nginx_update_intranet
-nginx_check_config --no-reload
+nginx_sync_config --no-reload || true
+nginx_variables --no-reload || true
+nginx_update_intranet --no-reload || true
+nginx_check_config --no-reload || true
 
 # Runs original command.
 exec "$@"

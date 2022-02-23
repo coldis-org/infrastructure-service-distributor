@@ -7,6 +7,7 @@
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 SKIP_RELOAD=false
+VHOST_DIR="/etc/nginx/vhost.d/"
 
 # For each argument.
 while :; do
@@ -36,6 +37,14 @@ trap - INT TERM
 
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'nginx_check_config'"
+
+# Test if exist any http2 listening to port 80
+${DEBUG} && echo "Checking http2 on vhost files"
+
+for file in $(grep -Ro "80[[:blank:]]\+http2" $VHOST_DIR | cut -d ":" -f1); do
+   echo "Moving file $file to ERR due invalid http2 directive"
+   mv $file $file.err
+done
 
 # Test files with errors.
 ${DEBUG} && nginx -t || true

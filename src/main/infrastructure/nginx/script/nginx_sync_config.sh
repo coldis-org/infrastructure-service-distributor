@@ -50,12 +50,14 @@ trap - INT TERM
 
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'nginx_sync_config'"
-
+${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
+${DEBUG} && echo "hostname=$(hostname)"
 
 # If host config should be syncd.
 if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
+	${DEBUG} && echo "Synching config"
 	# Downloads data.
 	rm -rf ${VHOSTS_TMP}/* 
 	rm -rf ${CERTS_TMP}/*

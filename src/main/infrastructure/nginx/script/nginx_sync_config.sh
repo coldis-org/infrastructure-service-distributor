@@ -6,7 +6,8 @@
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
-NO_RELOAD=false
+SKIP_RELOAD=false
+SKIP_RELOAD_PARAM=""
 VHOSTS=/etc/nginx/vhost.d
 STREAM=/etc/nginx/stream.d
 CERTS=/etc/letsencrypt
@@ -26,7 +27,7 @@ while :; do
 
 		# If no reload should be performed.
 		--no-reload)
-			NO_RELOAD=true
+			SKIP_RELOAD=true
 			;;
 			
 		# Other option.
@@ -71,21 +72,21 @@ then
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
-		${NO_RELOAD} || nginx_check_config
+		${SKIP_RELOAD} || nginx_check_config
 	fi
 
 	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
-		${NO_RELOAD} || nginx_check_config
+		${SKIP_RELOAD} || nginx_check_config
 	fi
 	
 	if ! diff -q ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
-		${NO_RELOAD} || nginx_check_config
+		${SKIP_RELOAD} || nginx_check_config
 	fi
 
 fi

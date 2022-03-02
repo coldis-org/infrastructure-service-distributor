@@ -7,6 +7,7 @@
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 SKIP_RELOAD=false
+SKIP_RELOAD_PARAM=""
 
 # For each argument.
 while :; do

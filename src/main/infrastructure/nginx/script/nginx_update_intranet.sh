@@ -6,6 +6,7 @@
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
+SKIP_RELOAD_PARAM=""
 
 # For each argument.
 while :; do

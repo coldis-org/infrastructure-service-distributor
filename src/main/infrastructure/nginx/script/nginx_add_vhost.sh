@@ -56,6 +56,7 @@ ${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
 ${DEBUG} && echo "VHOST=${VHOST}"
 
 # Reads the input file line by line.
+mkdir -p $(dirname ${VHOST})
 rm -f ${VHOST}.old ${VHOST}.tmp
 while read VHOST_LINE
 do

@@ -75,13 +75,8 @@ then
 	# If the config cannot be reloaded.
 	${DEBUG} && echo "Reloading config"
 	nginx_variables
-	if nginx_check_config
-	then
-		rm -f ${VHOST}.old
-	else 
-		mv ${VHOST}.old ${VHOST} || true
-		nginx_check_config
-	fi
+	nginx_check_config
+	rm -f ${VHOST}.old
 else 
 	echo "Config file '${VHOST}' has not changed. Skipping."
 fi

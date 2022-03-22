@@ -64,7 +64,7 @@ then
 	mkdir -p ${CERT_FOLDER}
 	if [ ! -f ${CERT_FOLDER}/key.pem ] || [ ! -f ${CERT_FOLDER}/cert.pem ]
 	then
-		CERT_CONF=$("/tmp/${DOMAIN}-cert.conf" | sed -e "s/\*/_/g")
+		CERT_CONF=$(echo "/tmp/${DOMAIN}-cert.conf" | sed -e "s/\*/_/g")
 		cat /etc/ssl/openssl.cnf > ${CERT_CONF}
 		echo "[SAN]\nsubjectAltName=DNS:${DOMAIN}" >> ${CERT_CONF}
 		openssl req -newkey rsa:4096 -new -x509 -sha256 -reqexts SAN -extensions SAN -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}" -config ${CERT_CONF}

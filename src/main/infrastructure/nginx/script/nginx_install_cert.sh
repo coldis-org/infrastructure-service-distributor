@@ -8,6 +8,7 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 DOMAINS=
 SELF_SIGNED=false
+FORCE_RENEW_ARG=
 
 # For each argument.
 while :; do
@@ -22,6 +23,11 @@ while :; do
 		# Self signed.
 		--self-signed)
 			SELF_SIGNED=true
+			;;
+		
+		# Force renew
+			--force-renew)
+			FORCE_RENEW_ARG="--force-renew"
 			;;
 			
 		# Other option.
@@ -72,5 +78,5 @@ then
 	fi
 else 
 	certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
-		--non-interactive --agree-tos --email technology@${HOST_NAME} ${DOMAINS}
+		--non-interactive --agree-tos --email technology@${HOST_NAME} ${FORCE_RENEW_ARG} ${DOMAINS}
 fi

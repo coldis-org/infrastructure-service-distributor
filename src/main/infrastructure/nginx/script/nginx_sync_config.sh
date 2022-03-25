@@ -65,6 +65,11 @@ then
 	rm -rf ${STREAM_TMP}/*
 	
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
+	# Exit if config distributor is down
+	if [ $? -ne 0 ]; then
+		${DEBUG} && echo "Failed to download folder"
+		exit 0
+	fi
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
 

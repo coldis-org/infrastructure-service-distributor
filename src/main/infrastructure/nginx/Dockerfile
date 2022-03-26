@@ -3,7 +3,6 @@ ARG NGINX_VERSION=1.21.6
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
-ARG MODSEC_VERSION=3.0.6
 
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
@@ -32,46 +31,78 @@ RUN apt-get update \
 
 WORKDIR /sources
 
-RUN git clone https://github.com/LMDB/lmdb --branch LMDB_0.9.29 --depth 1 \
+# LMDB.
+ARG LMDB_VERSION=0.9.29
+RUN wget --quiet https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_${LMDB_VERSION}.tar.gz \
+	&& tar -xvzf LMDB_${LMDB_VERSION}.tar.gz \
+	&& rm LMDB_${LMDB_VERSION}.tar.gz \
+	&& mv *lmdb* lmdb \
 	&& make -C lmdb/libraries/liblmdb install
 
-RUN git clone https://github.com/lloyd/yajl --branch 2.1.0 --depth 1 \
-	&& cd yajl \
+# YAJL.
+ARG YAJL_VERSION=2.1.0
+RUN wget --quiet https://github.com/lloyd/yajl/archive/refs/tags/${YAJL_VERSION}.tar.gz \
+	&& tar -xvzf ${YAJL_VERSION}.tar.gz \
+	&& rm ${YAJL_VERSION}.tar.gz \
+	&& mv *yajl* yajl \
+	&& cd yajl \ 
 	&& ./configure \
-	&& make install
+	&& make install \
+	&& cd ..
 
-RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/release-2.14.1/ssdeep-2.14.1.tar.gz \
-	&& tar -xvzf ssdeep-2.14.1.tar.gz \
-	&& cd ssdeep-2.14.1 \
+# SSDeep.
+ARG SSDEEP_VERSION=2.14.1
+RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/release-${SSDEEP_VERSION}/ssdeep-${SSDEEP_VERSION}.tar.gz \
+	&& tar -xvzf ssdeep-${SSDEEP_VERSION}.tar.gz \
+	&& rm ssdeep-${SSDEEP_VERSION}.tar.gz \
+	&& mv *ssdeep* ssdeep \
+	&& cd ssdeep \
 	&& ./configure \
-	&& make install
+	&& make install \
+	&& cd ..
 
-# pagespeed
+# Pagespeed.
 ARG NPS_VERSION=1.13.35.2
-RUN wget --quiet https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz && \
-	tar -xvzf v${NPS_VERSION}-stable.tar.gz && \
-	mv *pagespeed-ngx* pagespeed-nginx && \
-	cd pagespeed-nginx && \
-	wget --quiet https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz && \
-	tar -xvzf ${NPS_VERSION}-x64.tar.gz 
+RUN wget --quiet https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz \
+	&& tar -xvzf v${NPS_VERSION}-stable.tar.gz \
+	&& rm v${NPS_VERSION}-stable.tar.gz \
+	&& mv *pagespeed-ngx* pagespeed-nginx \
+	&& cd pagespeed-nginx \
+	&& wget --quiet https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz \
+	&& tar -xvzf ${NPS_VERSION}-x64.tar.gz \
+	&& rm ${NPS_VERSION}-x64.tar.gz \
+	&& cd ..
 
-# vts
-RUN git clone git://github.com/vozlt/nginx-module-vts.git
-
-RUN git clone https://github.com/SpiderLabs/ModSecurity --branch v${MODSEC_VERSION} --depth 1 \
-	&& cd ModSecurity \
+# VTS.
+ARG VTS_VERSION=0.1.18
+RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
+	&& tar -xvzf v${VTS_VERSION}.tar.gz \
+	&& rm v${VTS_VERSION}.tar.gz \
+	&& mv *nginx-module-vts* nginx-module-vts 
+		
+# Mod security.
+ARG MODSEC_VERSION=3.0.6
+RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& mv *modsecurity* modsecurity \
+	&& cd modsecurity \
 	&& ./build.sh \
-	&& git submodule init \
-	&& git submodule update \
 	&& ./configure --with-yajl=/sources/yajl/build/yajl-2.1.0/ \
-	&& make install
+	&& make install \
+	&& cd ..
 
-# We use master
-RUN git clone -b master --depth 1 https://github.com/SpiderLabs/ModSecurity-nginx.git \
+# Nginx.
+ARG MODSEC_NGINX_VERSION=1.0.2
+RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/download/v${MODSEC_NGINX_VERSION}/modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
+	&& tar -xvzf modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
+	&& rm modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
+	&& mv *modsecurity-nginx* modsecurity-nginx \
 	&& wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
-	&& tar -xzf nginx-${NGINX_VERSION}.tar.gz \
+	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
+	&& rm nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-debug --with-compat --add-dynamic-module=../ModSecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
+	&& ./configure --with-debug --with-compat --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
 	&& make modules \
 	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
 	&& cp objs/ngx_pagespeed.so /etc/nginx/modules/ \
@@ -112,49 +143,49 @@ ENV TZ=America/Sao_Paulo \
 	LANG=en_US.utf8 \
 	LANGUAGE=en_US:us \
 	LC_ALL=en_US
-RUN apt-get update -y && \
-	apt-get purge -y locales && \
-	apt-get install -y locales && \
-	rm /usr/share/locale/locale.alias && \
-	ln -s /etc/locale.alias /usr/share/locale/locale.alias && \
-	localedef -i ${LANG_NAME} -c -f UTF-8 -A /usr/share/locale/locale.alias ${LANG_FILE} && \
-	cp /usr/share/zoneinfo/${TZ} /etc/localtime && \
-	apt-get purge -y locales && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y \
+	&& apt-get purge -y locales \
+	&& apt-get install -y locales \
+	&& rm /usr/share/locale/locale.alias \
+	&& ln -s /etc/locale.alias /usr/share/locale/locale.alias \
+	&& localedef -i ${LANG_NAME} -c -f UTF-8 -A /usr/share/locale/locale.alias ${LANG_FILE} \
+	&& cp /usr/share/zoneinfo/${TZ} /etc/localtime \
+	&& apt-get purge -y locales \
+	&& apt-get clean -y \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Installs cron.
-RUN apt-get update -y && \
-	apt-get install -y cron dnsutils wget && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y \
+	&& apt-get install -y cron dnsutils wget \
+	&& apt-get clean -y \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Installs certbot.
-RUN apt-get update -y && \
-	apt-get install -y certbot python3-certbot-nginx && \
-	(certbot certonly --non-interactive --agree-tos || true) && \
-	openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048 && \
-	apt-get clean -y && \
-	rm -rf /var/lib/apt/lists/*
+RUN apt-get update -y \
+	&& apt-get install -y certbot python3-certbot-nginx \
+	&& (certbot certonly --non-interactive --agree-tos || true) \
+	&& openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048 \
+	&& apt-get clean -y \
+	&& rm -rf /var/lib/apt/lists/*
 
 # Configures scheduled jobs (cert and intranet updates)
 COPY cron /etc/cron.d
-RUN chmod -R 0644 /etc/cron.d/ && \
-	crontab /etc/cron.d/nginx_jobs
+RUN chmod -R 0644 /etc/cron.d/ \
+	&& crontab /etc/cron.d/nginx_jobs
 
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
 COPY script /opt/nginx-script
-RUN chmod -R 755 /opt/nginx-script && \
-	ln -s /opt/nginx-script/*.sh /usr/bin && \
-	for FILE in /usr/bin/nginx*.sh; \
+RUN chmod -R 755 /opt/nginx-script \
+	&& ln -s /opt/nginx-script/*.sh /usr/bin \
+	&& for FILE in /usr/bin/nginx*.sh; \
 	do \
 		mv -- "${FILE}" "${FILE%.sh}"; \
 	done
 
 # Copies configuration.
-RUN rm -f /etc/nginx/conf.d/* && \
-	mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /var/cache/pagespeed
+RUN rm -f /etc/nginx/conf.d/* \
+	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /var/cache/pagespeed
 
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx

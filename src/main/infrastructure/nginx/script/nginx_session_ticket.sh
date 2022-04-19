@@ -54,6 +54,7 @@ then
 	else
 		rm -f ${TICKER_FOLDER}/previous.key
 		mv ${TICKER_FOLDER}/current.key ${TICKER_FOLDER}/previous.key
+		openssl rand 80 > ${TICKER_FOLDER}/current.key
 	fi
 
 	# Renew the new cert.

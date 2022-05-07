@@ -73,21 +73,21 @@ then
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
 
-	if ! diff -q ${CERTS} ${CERTS_TMP}
+	if ! diff -rq ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
 		${SKIP_RELOAD} || nginx_check_config
 	fi
 
-	if ! diff -q ${VHOSTS} ${VHOSTS_TMP}
+	if ! diff -rq ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
 		${SKIP_RELOAD} || nginx_check_config
 	fi
 	
-	if ! diff -q ${STREAM} ${STREAM_TMP}
+	if ! diff -rq ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/

@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.21.6
+ARG NGINX_VERSION=1.22.0
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -93,7 +93,7 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${
 	&& cd ..
 
 # Nginx.
-ARG MODSEC_NGINX_VERSION=1.0.2
+ARG MODSEC_NGINX_VERSION=1.0.3
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/download/v${MODSEC_NGINX_VERSION}/modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& rm modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \

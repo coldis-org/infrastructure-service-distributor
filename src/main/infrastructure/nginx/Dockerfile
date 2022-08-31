@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.22.0
+ARG NGINX_VERSION=1.23.1
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -61,18 +61,6 @@ RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/rele
 	&& make install \
 	&& cd ..
 
-# Pagespeed.
-ARG NPS_VERSION=1.13.35.2
-RUN wget --quiet https://github.com/apache/incubator-pagespeed-ngx/archive/v${NPS_VERSION}-stable.tar.gz \
-	&& tar -xvzf v${NPS_VERSION}-stable.tar.gz \
-	&& rm v${NPS_VERSION}-stable.tar.gz \
-	&& mv *pagespeed-ngx* pagespeed-nginx \
-	&& cd pagespeed-nginx \
-	&& wget --quiet https://dl.google.com/dl/page-speed/psol/${NPS_VERSION}-x64.tar.gz \
-	&& tar -xvzf ${NPS_VERSION}-x64.tar.gz \
-	&& rm ${NPS_VERSION}-x64.tar.gz \
-	&& cd ..
-
 # VTS.
 ARG VTS_VERSION=0.1.18
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
@@ -81,14 +69,14 @@ RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${
 	&& mv *nginx-module-vts* nginx-module-vts 
 		
 # Mod security.
-ARG MODSEC_VERSION=3.0.6
+ARG MODSEC_VERSION=3.0.7
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& mv *modsecurity* modsecurity \
 	&& cd modsecurity \
 	&& ./build.sh \
-	&& ./configure --with-yajl=/sources/yajl/build/yajl-2.1.0/ \
+	&& ./configure --with-yajl=/sources/yajl/build/yajl-${YAJL_VERSION}/ \
 	&& make install \
 	&& cd ..
 
@@ -102,10 +90,9 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/downlo
 	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
 	&& rm nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-debug --with-compat --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../pagespeed-nginx --add-dynamic-module=../nginx-module-vts \
+	&& ./configure --with-debug --with-compat --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../nginx-module-vts \
 	&& make modules \
 	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
-	&& cp objs/ngx_pagespeed.so /etc/nginx/modules/ \
 	&& cp objs/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/\
 	&& mkdir /etc/modsecurity.d \
 	&& wget --quiet https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/unicode.mapping \
@@ -133,7 +120,6 @@ COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
 COPY --from=build /usr/local/lib/ /usr/local/lib/
 COPY --from=build /etc/nginx/modules/ngx_http_modsecurity_module.so /etc/nginx/modules/ngx_http_modsecurity_module.so
 COPY --from=build /etc/modsecurity.d/unicode.mapping /etc/modsecurity.d/unicode.mapping
-COPY --from=build /etc/nginx/modules/ngx_pagespeed.so /etc/nginx/modules/ngx_pagespeed.so
 COPY --from=build /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so
 
 # Sets locale and UTF-8 charset.
@@ -185,13 +171,12 @@ RUN chmod -R 755 /opt/nginx-script \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* \
-	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /var/cache/pagespeed
-
+	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
 
 # Changes default permissions.
-RUN chown -R nginx /var/cache/nginx/ /var/cache/pagespeed/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
+RUN chown -R nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
 ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\

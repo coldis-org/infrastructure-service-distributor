@@ -1,5 +1,5 @@
 # From Nginx image.
-FROM coldis/infrastructure-service-distributor-nginx:1.1.4
+FROM coldis/infrastructure-service-distributor-nginx:1.2.0
 
 # Copies config.
 COPY config/nginx /etc/nginx

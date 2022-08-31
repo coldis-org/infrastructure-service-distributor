@@ -54,7 +54,7 @@ for NET in $(echo ${AVAILABLE_NETS} | sed "s/,/ /g")
 do
 
 	# For each host.
-	for HOST_NUMBER in $(seq 0 49)
+	for HOST_NUMBER in $(seq 0 199)
 	do
 	
 		# Gets the old and new host IPs.

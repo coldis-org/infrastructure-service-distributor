@@ -67,20 +67,30 @@ CONFIG_VALID=true
 LAST_NGINX_ERROR_FILE=
 while [ ! -z "${NGINX_ERROR}" ]
 do
+    CERT_ERROR=
 	CONFIG_VALID=false
 	echo "NGINX_ERROR=${NGINX_ERROR}"
-	# Removes files with errors.
 	NGINX_ERROR_FILE=$(echo ${NGINX_ERROR} | sed -e "s/.*\[emerg\]//g" -e "s/[^\/]* \//\//" -e "s/[: ].*//g")
-	# If it is the main file, breaks.
-	if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ] || [ "${LAST_NGINX_ERROR_FILE}" = "${NGINX_ERROR_FILE}" ]
+    CERT_ERROR=$(echo ${NGINX_ERROR} | grep "cannot load certificate" | sed -e "s#.*/etc/letsencrypt/live/##g" -e "s#/fullchain.pem.*##g" )
+	# If the certificate does not exist on https.
+	if [ ! -z ${CERT_ERROR} ]
 	then
-		echo "Main file with error. Nothing to do."
-		break
+			NO_CERT_FILE=$(grep -m 1 ${CERT_ERROR} /etc/nginx/vhost.d/* | cut -d: -f1 | grep https)
+			echo "Removing $NO_CERT_FILE due non existent certificate."
+			rm -f ${NO_CERT_FILE}
+	else
+		# If it is the main file, breaks.
+		if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ] || [ "${LAST_NGINX_ERROR_FILE}" = "${NGINX_ERROR_FILE}" ]
+		then
+					echo "Main file with error. Nothing to do."
+					break
+		fi
+		# Removes files with errors.
+		LAST_NGINX_ERROR_FILE=${NGINX_ERROR_FILE}
+		echo "Moving file ${NGINX_ERROR_FILE} to ${NGINX_ERROR_FILE}.err"
+		rm -f ${NGINX_ERROR_FILE}.err
+		mv ${NGINX_ERROR_FILE} ${NGINX_ERROR_FILE}.err
 	fi
-	LAST_NGINX_ERROR_FILE=${NGINX_ERROR_FILE}
-	echo "Moving file ${NGINX_ERROR_FILE} to ${NGINX_ERROR_FILE}.err"
-	rm -f ${NGINX_ERROR_FILE}.err
-	mv ${NGINX_ERROR_FILE} ${NGINX_ERROR_FILE}.err
 	NGINX_TEST="$( nginx -t 2>&1 | cat )"
 	${DEBUG} && echo "${NGINX_TEST}"
 	NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"

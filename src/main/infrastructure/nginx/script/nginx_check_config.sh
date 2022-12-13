@@ -65,12 +65,20 @@ ${DEBUG} && echo "NGINX_TEST=${NGINX_TEST}"
 NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
 CONFIG_VALID=true
 LAST_NGINX_ERROR_FILE=
+CERT_ERROR=
 while [ ! -z "${NGINX_ERROR}" ]
 do
 	CONFIG_VALID=false
 	echo "NGINX_ERROR=${NGINX_ERROR}"
 	# Removes files with errors.
 	NGINX_ERROR_FILE=$(echo ${NGINX_ERROR} | sed -e "s/.*\[emerg\]//g" -e "s/[^\/]* \//\//" -e "s/[: ].*//g")
+    # Check if is not a certificate error
+    if [ -z "${NGINX_ERROR_FILE}" ]
+    then
+        CERT_ERROR=$(echo ${NGINX_ERROR} | grep "cannot load certificate" | sed -e "s#.*/etc/letsencrypt/live/##g" -e "s#/fullchain.pem.*##g" )
+        NGINX_ERROR_FILE=$(grep -m 1 ${CERT_ERROR} /etc/nginx/vhost.d/* | cut -d: -f1 | grep https)
+		echo "Certificate $CERT_ERROR not found"
+    fi
 	# If it is the main file, breaks.
 	if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ] || [ "${LAST_NGINX_ERROR_FILE}" = "${NGINX_ERROR_FILE}" ]
 	then

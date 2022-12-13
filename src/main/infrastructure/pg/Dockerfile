@@ -1,5 +1,5 @@
 # From Debian.
-FROM debian:bullseye-slim
+FROM debian:11.5-slim
 ENV DEBIAN_FRONTEND noninteractive
 
 # Installs necessary libs to build pgbouncer.
@@ -10,7 +10,7 @@ RUN	set -x \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.14.0 \
+ENV PGBOUNCER_VERSION=1.17.0 \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \

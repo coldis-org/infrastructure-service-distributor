@@ -4,10 +4,10 @@
 #set -o pipefail
 
 # Default parameters.
-DEBUG=${DEBUG:=true}
+DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 VHOSTS_FOLDER=/etc/nginx/vhost.d
-BRANCH_PREFIX="feat"
+TEMP_PREFIX=${TEMP_PREFIX:="temp"}
 
 # For each argument.
 while :; do
@@ -18,7 +18,11 @@ while :; do
 			DEBUG=true
 			DEBUG_OPT="--debug"
 			;;
-			
+		# Temp prefix
+		--temp-prefix)
+			TEMP_PREFIX=${2}
+			shift
+			;;
 		# Other option.
 		?*)
 			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
@@ -32,6 +36,10 @@ while :; do
 	shift
 done
 
+# Print if debug mode
+${DEBUG} && echo "Running 'nginx_remove_temporary_service_vhost'"
+${DEBUG} && echo "TEMP_PREFIX = $TEMP_PREFIX"
+
 # Using unavaialble variables should fail the script.
 set -o nounset
 
@@ -39,16 +47,16 @@ set -o nounset
 trap - INT TERM
 
 # Filter domains created by temporary services.
-BRANCH_CERTS=$(grep -w "server_name" $VHOSTS_FOLDER/*http.conf | sed -e "s/.*server_name//g" | tr -d ';' | tr -d [:blank:] | grep "^${BRANCH_PREFIX}-")
+TEMP_CERTS=$(grep -w "server_name" $VHOSTS_FOLDER/*http.conf | sed -e "s/.*server_name//g" | tr -d ';' | tr -d [:blank:] | grep "^${TEMP_PREFIX}-")
 
 ${DEBUG} && echo "Running 'nginx_remove_branch_services_vhost'"
 
 # Removing services branch certificates.
-for CERT in $BRANCH_CERTS; do
+for CERT in $TEMP_CERTS; do
 	${DEBUG} && echo "Removing certificates $CERT"
 	certbot delete --cert-name $CERT --non-interactive || true
 	sleep 1
 done
 
 # Removing  temporary vhosts.
-rm $VHOSTS_FOLDER/${BRANCH_PREFIX}-*.conf* -v || true
+rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

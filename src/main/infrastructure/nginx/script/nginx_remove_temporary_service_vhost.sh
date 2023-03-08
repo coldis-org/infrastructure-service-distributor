@@ -51,12 +51,13 @@ TEMP_CERTS=$(grep -w "server_name" $VHOSTS_FOLDER/*http.conf | sed -e "s/.*serve
 
 ${DEBUG} && echo "Running 'nginx_remove_branch_services_vhost'"
 
-# Removing services branch certificates.
+# Removing services temporary certificates.
 for CERT in $TEMP_CERTS; do
 	${DEBUG} && echo "Removing certificates $CERT"
-	certbot delete --cert-name $CERT --non-interactive || true
-	sleep 1
+	rm -rf /etc/letsencrypt/live/${CERT} -v 		|| true
+	rm -rf /etc/letsencrypt/renewal/${CERT}.conf -v || true
+	rm -rf /etc/letsencrypt/archive/${CERT} -v 		|| true
 done
 
-# Removing  temporary vhosts.
+# Removing temporary vhosts.
 rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

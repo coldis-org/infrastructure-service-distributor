@@ -46,8 +46,6 @@ set -o nounset
 # Enables interruption signal handling.
 trap - INT TERM
 
-${DEBUG} && echo "Running 'nginx_remove_temporary_services_vhost'"
-
 # Removing temporary vhosts.
 ${DEBUG} && echo "Removing temporary vhosts "
 rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

@@ -46,18 +46,8 @@ set -o nounset
 # Enables interruption signal handling.
 trap - INT TERM
 
-# Filter domains created by temporary services.
-TEMP_CERTS=$(grep -w "server_name" $VHOSTS_FOLDER/*http.conf | sed -e "s/.*server_name//g" | tr -d ';' | tr -d [:blank:] | grep "^${TEMP_PREFIX}-")
-
-${DEBUG} && echo "Running 'nginx_remove_branch_services_vhost'"
-
-# Removing services temporary certificates.
-for CERT in $TEMP_CERTS; do
-	${DEBUG} && echo "Removing certificates $CERT"
-	rm -rf /etc/letsencrypt/live/${CERT} -v 		|| true
-	rm -rf /etc/letsencrypt/renewal/${CERT}.conf -v || true
-	rm -rf /etc/letsencrypt/archive/${CERT} -v 		|| true
-done
+${DEBUG} && echo "Running 'nginx_remove_temporary_services_vhost'"
 
 # Removing temporary vhosts.
+${DEBUG} && echo "Removing temporary vhosts "
 rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

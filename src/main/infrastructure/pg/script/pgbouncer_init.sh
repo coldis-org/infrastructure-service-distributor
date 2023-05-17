@@ -64,6 +64,9 @@ fi
 LDAP_CONF_FILE=/etc/pam_ldap.conf
 LDAP_CONF=$(envsubst < ${LDAP_CONF_FILE})
 echo "${LDAP_CONF}" > ${LDAP_CONF_FILE}
+CONF_FILE=${PGBOUNCER_CONFIG}/pgbouncer.ini
+CONF=$(envsubst < ${CONF_FILE})
+echo "${CONF}" > ${CONF_FILE}
 
 # Executes the init script.
 echo "Starting pgbouncer..."

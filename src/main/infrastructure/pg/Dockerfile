@@ -1,5 +1,5 @@
 # From Debian.
-FROM debian:11.5-slim
+FROM debian:11.7-slim
 ENV DEBIAN_FRONTEND noninteractive
 
 # Installs necessary libs to build pgbouncer.
@@ -10,7 +10,7 @@ RUN	set -x \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.17.0 \
+ENV PGBOUNCER_VERSION=1.19.0 \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \
@@ -62,6 +62,11 @@ RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_
 
 # Copies the LDAP files.
 COPY config/pam_ldap.conf /etc
+
+# Env.
+ENV MAX_USER_CONNECTIONS=39\
+	MAX_DB_CONNECTIONS=213\
+	MAX_CLIENT_CONN=2397
 
 # Entrypoint.
 ENTRYPOINT [ "pgbouncer_init" ]

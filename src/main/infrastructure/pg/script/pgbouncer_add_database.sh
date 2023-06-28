@@ -55,6 +55,18 @@ ${DEBUG} && echo "DATABASE_NAME=${DATABASE_NAME}"
 ${DEBUG} && echo "DATABASE_CONFIG=${DATABASE_CONFIG}"
 ${DEBUG} && echo "DATABASE=${DATABASE}"
 
+# Regular expression pattern to match the desired line format
+PATTERN="^([a-zA-Z0-9_-]+) = host=([a-zA-Z0-9.-]+) port=([0-9]+) dbname=([a-zA-Z0-9_-]+)( user=([a-zA-Z0-9_-]+))?( password=([a-zA-Z0-9_-]+))?$"
+
+# Check database string is valid.
+LINE="${DATABASE_NAME} = ${DATABASE_CONFIG}"
+if echo "$LINE" | grep -Eq "$PATTERN"; then
+	echo "Valid line: $LINE"
+else
+	echo "Invalid line: $LINE"
+	exit 1   
+fi
+
 # If the database is configured.
 if cat ${PGBOUNCER_CONFIG}/database/database.ini | grep -w "${DATABASE_NAME} ="
 then

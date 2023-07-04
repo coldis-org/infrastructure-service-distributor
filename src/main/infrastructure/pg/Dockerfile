@@ -10,7 +10,7 @@ RUN	set -x \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.19.0 \
+ENV PGBOUNCER_VERSION=1.19.1 \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \

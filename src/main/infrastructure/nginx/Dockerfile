@@ -1,62 +1,54 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.25.0
+ARG NGINX_VERSION=1.25.1
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
 
-RUN apt-get update \
+RUN apt update \
+	&& apt full-upgrade -y \
 	&& apt-get install -y --no-install-recommends \
-	automake \
-	cmake \
-	doxygen \
-	g++ \
-	git \
-	libcurl4-gnutls-dev \
-	libgeoip-dev \
-	liblua5.3-dev \
-	libpcre++-dev \
-	libtool \
-	libxml2-dev \
-	make \
-	ruby \
 	wget \
-	zlib1g-dev \
+	gcc \
+	make \
+	cmake \
+	build-essential \
+	autoconf \
+	automake \
+	libtool \
+	libcurl4-openssl-dev \
+	liblua5.3-dev \
+	libfuzzy-dev \
+	ssdeep \
+	gettext \
+	pkg-config \
 	libpcre3 \
 	libpcre3-dev \
+	libxml2 \
+	libxml2-dev \
+	libcurl4 \
+	libgeoip-dev \
+	libyajl-dev \
+	doxygen \
+	libpcre2-16-0 \
+	libpcre2-dev \
+	libpcre2-posix3 \
+	zlib1g-dev \
+	git \
 	unzip \
-	uuid-dev \
-	build-essential \
+	uuid-dev \	
 	&& apt-get clean \
 	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /sources
 
-# LMDB.
-ARG LMDB_VERSION=0.9.29
-RUN wget --quiet https://github.com/LMDB/lmdb/archive/refs/tags/LMDB_${LMDB_VERSION}.tar.gz \
-	&& tar -xvzf LMDB_${LMDB_VERSION}.tar.gz \
-	&& rm LMDB_${LMDB_VERSION}.tar.gz \
-	&& mv *lmdb* lmdb \
-	&& make -C lmdb/libraries/liblmdb install
-
-# YAJL.
-ARG YAJL_VERSION=2.1.0
-RUN wget --quiet https://github.com/lloyd/yajl/archive/refs/tags/${YAJL_VERSION}.tar.gz \
-	&& tar -xvzf ${YAJL_VERSION}.tar.gz \
-	&& rm ${YAJL_VERSION}.tar.gz \
-	&& mv *yajl* yajl \
-	&& cd yajl \ 
-	&& ./configure \
-	&& make install \
-	&& cd ..
-
-# SSDeep.
-ARG SSDEEP_VERSION=2.14.1
-RUN wget --quiet https://github.com/ssdeep-project/ssdeep/releases/download/release-${SSDEEP_VERSION}/ssdeep-${SSDEEP_VERSION}.tar.gz \
-	&& tar -xvzf ssdeep-${SSDEEP_VERSION}.tar.gz \
-	&& rm ssdeep-${SSDEEP_VERSION}.tar.gz \
-	&& mv *ssdeep* ssdeep \
-	&& cd ssdeep \
+# Mod security.
+ARG MODSEC_VERSION=3.0.9
+RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& mv *modsecurity* modsecurity \
+	&& cd modsecurity \
+	&& ./build.sh \
 	&& ./configure \
 	&& make install \
 	&& cd ..
@@ -67,18 +59,6 @@ RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \
 	&& mv *nginx-module-vts* nginx-module-vts 
-		
-# Mod security.
-ARG MODSEC_VERSION=3.0.9
-RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
-	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
-	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
-	&& mv *modsecurity* modsecurity \
-	&& cd modsecurity \
-	&& ./build.sh \
-	&& ./configure --with-yajl=/sources/yajl/build/yajl-${YAJL_VERSION}/ \
-	&& make install \
-	&& cd ..
 
 # Nginx.
 ARG MODSEC_NGINX_VERSION=1.0.3
@@ -117,6 +97,8 @@ RUN apt-get update \
 
 # Copies previous configuration.
 COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
+COPY --from=build /lib/ /lib/
+COPY --from=build /usr/lib/ /usr/lib/
 COPY --from=build /usr/local/lib/ /usr/local/lib/
 COPY --from=build /etc/nginx/modules/ngx_http_modsecurity_module.so /etc/nginx/modules/ngx_http_modsecurity_module.so
 COPY --from=build /etc/modsecurity.d/unicode.mapping /etc/modsecurity.d/unicode.mapping

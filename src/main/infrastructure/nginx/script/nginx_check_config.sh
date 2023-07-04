@@ -44,16 +44,19 @@ ERROR_FILES=/etc/nginx/*/*.conf.err
 for ERROR_FILE in ${ERROR_FILES}
 do
 	
-	# If the original file exists.
-	ORIGINAL_FILE=$(echo "${ERROR_FILE}" | sed "s/.err$//")
-	if [ -f "${ORIGINAL_FILE}" ]
+	if [ -f "${ERROR_FILE}" ]
 	then
-		# Removes the error file.
-		rm ${ERROR_FILE}
-	# If the original file does not exist.
-	else
-		# Moves the error file back to its original name.
-		mv ${ERROR_FILE} ${ORIGINAL_FILE}
+		# If the original file exists.
+		ORIGINAL_FILE=$(echo "${ERROR_FILE}" | sed "s/.err$//")
+		if [ -f "${ORIGINAL_FILE}" ]
+		then
+			# Removes the error file.
+			rm ${ERROR_FILE}
+		# If the original file does not exist.
+		else
+			# Moves the error file back to its original name.
+			mv ${ERROR_FILE} ${ORIGINAL_FILE}
+		fi
 	fi
 
 done

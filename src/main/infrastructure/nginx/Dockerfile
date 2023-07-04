@@ -70,7 +70,7 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/downlo
 	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
 	&& rm nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-debug --with-compat --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../nginx-module-vts \
+	&& ./configure --with-debug --with-compat --with-http_v2_module --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../nginx-module-vts \
 	&& make modules \
 	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
 	&& cp objs/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/\

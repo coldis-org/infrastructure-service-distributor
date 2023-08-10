@@ -67,10 +67,34 @@ echo "${LDAP_CONF}" > ${LDAP_CONF_FILE}
 CONF_FILE=${PGBOUNCER_CONFIG}/pgbouncer.ini
 CONF=$(envsubst < ${CONF_FILE})
 echo "${CONF}" > ${CONF_FILE}
+CURRENT_PROCESS=$((CURRENT_PROCESS+1))
 
-# Executes the init script.
-echo "Starting pgbouncer..."
-${DEBUG} && echo "exec ${PGBOUNCER_BIN}/pgbouncer ${QUIET:+-q} -u ${PGBOUNCER_USER} ${PGBOUNCER_CONFIG}/pgbouncer.ini"
+# Creates config files for each process.
+CURRENT_PROCESS=0
+while [ "${CURRENT_PROCESS}" -lt "${PROCESSES}" ]
+do
+	mkdir -p  /var/pgbouncer/socket/${CURRENT_PROCESS}
+	cp ${PGBOUNCER_CONFIG}/pgbouncer.ini ${PGBOUNCER_CONFIG}/pgbouncer${CURRENT_PROCESS}.ini
+	sed -i "s/CURRENT_PROCESS/${CURRENT_PROCESS}/g" ${PGBOUNCER_CONFIG}/pgbouncer${CURRENT_PROCESS}.ini
+	CURRENT_PROCESS=$((CURRENT_PROCESS+1))
+done
+
+# Enforces permissions.
+chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CONFIG} ${PGBOUNCER_BIN} && \
+	chmod -R 755 ${PGBOUNCER_LOGS}
 su postgres
-exec ${PGBOUNCER_BIN}/pgbouncer ${QUIET:+-q} -u ${PGBOUNCER_USER} ${PGBOUNCER_CONFIG}/pgbouncer.ini
+
+# Runs alternative processes.
+CURRENT_PROCESS=1
+while [ "${CURRENT_PROCESS}" -lt "${PROCESSES}" ]
+do
+	echo "Running extra process (${CURRENT_PROCESS})..."
+	${PGBOUNCER_BIN}/pgbouncer ${QUIET:+-q} -u ${PGBOUNCER_USER} ${PGBOUNCER_CONFIG}/pgbouncer${CURRENT_PROCESS}.ini &
+	CURRENT_PROCESS=$((CURRENT_PROCESS+1))
+done
+
+# Runs main process.
+echo "Starting main process..."
+${DEBUG} && echo "exec ${PGBOUNCER_BIN}/pgbouncer ${QUIET:+-q} -u ${PGBOUNCER_USER} ${PGBOUNCER_CONFIG}/pgbouncer.ini"
+exec ${PGBOUNCER_BIN}/pgbouncer ${QUIET:+-q} -u ${PGBOUNCER_USER} ${PGBOUNCER_CONFIG}/pgbouncer0.ini
 

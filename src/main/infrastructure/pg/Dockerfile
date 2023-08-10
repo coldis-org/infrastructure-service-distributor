@@ -10,15 +10,17 @@ RUN	set -x \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.19.1 \
+ENV PGBOUNCER_VERSION=1.20.0 \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \
+	PGBOUNCER_SOCKET=/var/pgbouncer/socket \
 	PGBOUNCER_CERTS=/etc/ssl/certs \
 	PGBOUNCER_USER=postgres 
 RUN mkdir -p ${PGBOUNCER_BIN} && \
 	mkdir -p ${PGBOUNCER_CONFIG} && \
 	mkdir -p ${PGBOUNCER_LOGS} && \
+	mkdir -p ${PGBOUNCER_SOCKET} && \
 	mkdir -p ${PGBOUNCER_CERTS} && \
 	cd ${PGBOUNCER_BIN} && \
 	curl -Lso  "${PGBOUNCER_BIN}/pgbouncer.tar.gz" "https://pgbouncer.github.io/downloads/files/${PGBOUNCER_VERSION}/pgbouncer-${PGBOUNCER_VERSION}.tar.gz"  && \
@@ -44,7 +46,6 @@ RUN	set -x \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
 
-
 # Copies the scripts.
 RUN mkdir -p /opt/pgbouncer-script
 COPY script /opt/pgbouncer-script
@@ -56,17 +57,22 @@ RUN chmod -R 755 /opt/pgbouncer-script && \
 	done
 
 # Copies the configuration files.
-COPY config/pgbouncer.ini etc/pgbouncer/
-RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_LOGS} ${PGBOUNCER_CONFIG} ${PGBOUNCER_BIN} && \
+COPY config/pgbouncer.ini /etc/pgbouncer/
+RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CONFIG} ${PGBOUNCER_BIN} && \
 	chmod -R 755 ${PGBOUNCER_LOGS}
 
 # Copies the LDAP files.
 COPY config/pam_ldap.conf /etc
 
 # Env.
-ENV MAX_USER_CONNECTIONS=39\
-	MAX_DB_CONNECTIONS=213\
-	MAX_CLIENT_CONN=2397
+ENV MIN_POOL_SIZE=7\
+	DEFAULT_POOL_SIZE=73\
+	RESERVE_POOL_SIZE=5\
+	MAX_USER_CONNECTIONS=19\
+	MAX_DB_CONNECTIONS=93\
+	MAX_CLIENT_CONN=739\
+	POOL_MODE=session\
+	PROCESSES=1
 
 # Entrypoint.
 ENTRYPOINT [ "pgbouncer_init" ]

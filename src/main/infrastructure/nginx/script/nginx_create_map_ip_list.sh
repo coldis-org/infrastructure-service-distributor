@@ -2,6 +2,7 @@
 
 INTRANET_FILE=/etc/nginx/conf.d/include.d/access-intranet.conf
 IP_LIST_FILE=/etc/nginx/conf.d/include.d/map-ip-list
+DEBUG=${DEBUG:=false}
 
 while :; do
 	case ${1} in

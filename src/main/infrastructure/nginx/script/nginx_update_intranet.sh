@@ -107,6 +107,7 @@ done
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
+	nginx_create_map_ip_list
 	nginx_variables ${SKIP_RELOAD_PARAM}
 	nginx_check_config ${SKIP_RELOAD_PARAM}
 fi

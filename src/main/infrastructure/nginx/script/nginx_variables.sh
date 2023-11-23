@@ -48,6 +48,7 @@ if [ -z "${FILES}" ]
 then
 FILES="\
 $(ls /etc/modsecurity.d/ | sed "s#^#/etc/modsecurity.d/#") \
+$(ls /etc/modsecurity.d/custom-rules | sed "s#^#/etc/modsecurity.d/custom-rules/#") \
 $(ls /etc/nginx/ | sed "s#^#/etc/nginx/#") \
 $(ls /etc/nginx/conf.d | sed "s#^#/etc/nginx/conf.d/#") \
 $(ls /etc/nginx/conf.d/include.d | sed "s#^#/etc/nginx/conf.d/include.d/#") \

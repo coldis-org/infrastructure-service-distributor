@@ -10,10 +10,12 @@ SKIP_RELOAD=false
 SKIP_RELOAD_PARAM=""
 VHOSTS=/etc/nginx/vhost.d
 STREAM=/etc/nginx/stream.d
+CUSTOM=/etc/nginx/custom.d
 CERTS=/etc/letsencrypt
 VHOSTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/vhost
 CERTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/cert
 STREAM_TMP=/tmp/nginx/${CONF_HOST_NAME}/stream
+CUSTOM_TMP=/tmp/nginx/${CONF_HOST_NAME}/custom
 
 # For each argument.
 while :; do
@@ -63,6 +65,7 @@ then
 	rm -rf ${VHOSTS_TMP}/* 
 	rm -rf ${CERTS_TMP}/*
 	rm -rf ${STREAM_TMP}/*
+	rm -rf ${CUSTOM_TMP}/*
 	
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
 	# Exit if config distributor is down
@@ -72,6 +75,7 @@ then
 	fi
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
+	wget --recursive --no-parent -q -R "index.html*" -P ${CUSTOM_TMP}/../.. ${CONF_HOST_NAME}/custom/
 
 	if ! diff -rq ${CERTS} ${CERTS_TMP}
 	then
@@ -91,6 +95,13 @@ then
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
+		${SKIP_RELOAD} || nginx_check_config
+	fi
+
+	if ! diff -rq ${CUSTOM} ${CUSTOM_TMP}
+	then
+		rm -rf ${CUSTOM}/*
+		mv ${CUSTOM_TMP}/* ${CUSTOM}/
 		${SKIP_RELOAD} || nginx_check_config
 	fi
 

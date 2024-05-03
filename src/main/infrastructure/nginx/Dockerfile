@@ -153,7 +153,7 @@ RUN chmod -R 755 /opt/nginx-script \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* \
-	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/
+	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /etc/nginx/custom.d
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
 

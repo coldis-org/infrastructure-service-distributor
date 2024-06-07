@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.25.1
+ARG NGINX_VERSION=1.26.1
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build

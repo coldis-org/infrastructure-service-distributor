@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.25.1
+ARG NGINX_VERSION=1.25.5
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -42,7 +42,7 @@ RUN apt update \
 WORKDIR /sources
 
 # Mod security.
-ARG MODSEC_VERSION=3.0.9
+ARG MODSEC_VERSION=3.0.12
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
@@ -54,7 +54,7 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${
 	&& cd ..
 
 # VTS.
-ARG VTS_VERSION=0.2.1
+ARG VTS_VERSION=0.2.2
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \
@@ -164,7 +164,7 @@ ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
-	LOG_BUFFER=512k\
+	LOG_BUFFER=1m\
 	LOG_FLUSH=17s\
 	LOG_LEVEL=warn\
 	DNS_SERVER=\

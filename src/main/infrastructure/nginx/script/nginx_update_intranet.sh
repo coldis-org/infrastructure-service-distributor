@@ -56,7 +56,10 @@ do
 	# For each host.
 	for HOST_NUMBER in $(seq 0 199)
 	do
-	
+
+		${DEBUG} && echo ""
+		${DEBUG} && echo "Entry ${HOST_NUMBER}"
+
 		# Gets the old and new host IPs.
 		CONF_FILE=/etc/nginx/conf.d/include.d/access-${NET}.conf
 		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Entry ${HOST_NUMBER}\." | grep "allow" | sed "s/^[ \t]*//g" )
@@ -90,8 +93,8 @@ do
 				${UPDATE_LOOPBACK}
 			then
 			
-				# Replaces them in the net file.
-				sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
+				# Replaces them in the net file. Get the next line after entry from file
+				sed -i "/# Entry ${HOST_NUMBER}\.$/!b;n;c ${NEW_HOST_CONFIG}" ${CONF_FILE}
 			
 				# If the IP has changed.
 				if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
@@ -123,6 +126,5 @@ then
 	nginx_variables ${SKIP_RELOAD_PARAM}
 	nginx_check_config ${SKIP_RELOAD_PARAM}
 fi
-
 
 

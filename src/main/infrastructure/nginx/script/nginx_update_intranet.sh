@@ -57,6 +57,12 @@ do
 	for HOST_NUMBER in $(seq 0 199)
 	do
 
+		# Initilize vars
+		OLD_HOST_CONFIG=
+		NEW_HOST_CONFIG=
+		NET_IP=
+		INITIAL_OLD_IP=
+
 		${DEBUG} && echo ""
 		${DEBUG} && echo "Entry ${HOST_NUMBER}"
 

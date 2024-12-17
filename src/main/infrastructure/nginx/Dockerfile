@@ -157,6 +157,9 @@ RUN rm -f /etc/nginx/conf.d/* \
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
 
+# Create dir to populate later
+RUN mkdir -p /etc/nginx/upstream.d
+
 # Changes default permissions.
 RUN chown -R nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 

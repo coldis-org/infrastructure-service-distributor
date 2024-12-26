@@ -70,7 +70,7 @@ then
 		${DEBUG} && echo "Failed to download folder"
 		exit 0
 	fi
-	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/ --exclude-directories=/cert/archive,/cert/csr,/cert/keys
+	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
 
 	if ! diff -rq ${CERTS} ${CERTS_TMP}

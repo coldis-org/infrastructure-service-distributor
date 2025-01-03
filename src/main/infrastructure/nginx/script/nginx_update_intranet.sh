@@ -8,6 +8,17 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 SKIP_RELOAD=false
 SKIP_RELOAD_PARAM=""
+INTERNAL_NETWORK_IPS=${INTERNAL_NETWORK_IPS:="172.16.0.0/16,172.17.0.0/16"}
+
+UPDATE_INTERNAL_NETWORK() {
+    if grep -q "{INTERNAL_NETWORK_IPS}" $CONF_FILE; then
+        echo "$INTERNAL_NETWORK_IPS" | tr ',' '\n' | sed 's/^/allow /; s/$/;/' > /tmp/formatted_ips
+        sed -i -e "/^{INTERNAL_NETWORK_IPS}$/r /tmp/formatted_ips" -e "/^{INTERNAL_NETWORK_IPS}$/d" $CONF_FILE
+        rm /tmp/formatted_ips
+    else
+        ${DEBUG} && echo "Not found placeholder to update ip"
+    fi
+}
 
 # For each argument.
 while :; do
@@ -56,12 +67,24 @@ do
 	# For each host.
 	for HOST_NUMBER in $(seq 0 199)
 	do
-	
+
+		# Initilize vars
+		OLD_HOST_CONFIG=
+		NEW_HOST_CONFIG=
+		NET_IP=
+		INITIAL_OLD_IP=
+
+		${DEBUG} && echo ""
+		${DEBUG} && echo "Entry ${HOST_NUMBER}"
+
 		# Gets the old and new host IPs.
 		CONF_FILE=/etc/nginx/conf.d/include.d/access-${NET}.conf
 		OLD_HOST_CONFIG=$( cat ${CONF_FILE} | grep -A1 "Entry ${HOST_NUMBER}\." | grep "allow" | sed "s/^[ \t]*//g" )
 		${DEBUG} && echo "OLD_HOST_CONFIG=${OLD_HOST_CONFIG}"
-	
+		
+		# Update LAN
+		UPDATE_INTERNAL_NETWORK
+
 		# If the Intranet IP is valid.
 		NET_IP=$( dig +short site${HOST_NUMBER}.${NET}.${HOST_NAME} | tail -1 )
 		
@@ -90,8 +113,8 @@ do
 				${UPDATE_LOOPBACK}
 			then
 			
-				# Replaces them in the net file.
-				sed -i "s/${OLD_HOST_CONFIG}/${NEW_HOST_CONFIG}/g" ${CONF_FILE}
+				# Replaces them in the net file. Get the next line after entry from file
+				sed -i "/# Entry ${HOST_NUMBER}\.$/!b;n;c ${NEW_HOST_CONFIG}" ${CONF_FILE}
 			
 				# If the IP has changed.
 				if [ "${OLD_HOST_CONFIG}" != "${NEW_HOST_CONFIG}" ]
@@ -123,6 +146,5 @@ then
 	nginx_variables ${SKIP_RELOAD_PARAM}
 	nginx_check_config ${SKIP_RELOAD_PARAM}
 fi
-
 
 

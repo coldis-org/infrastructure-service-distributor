@@ -43,7 +43,7 @@ WORKDIR /sources
 
 # Mod security.
 ARG MODSEC_VERSION=3.0.13
-RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
+RUN wget --quiet https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& mv *modsecurity* modsecurity \
@@ -52,9 +52,9 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${
 	&& ./configure \
 	&& make install \
 	&& cd ..
-
+	
 # VTS.
-ARG VTS_VERSIONv0.2.3
+ARG VTS_VERSION=0.2.3
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \
@@ -167,26 +167,31 @@ ENV	CERTBOT_PORT=80\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
-	LOG_BUFFER=1m\
-	LOG_FLUSH=17s\
+	LOG_BUFFER=3m\
+	LOG_FLUSH=30s\
 	LOG_LEVEL=warn\
 	DNS_SERVER=\
-	CONNECTION_TIMEOUT=11s\
-	TIMEOUT=45s\
+	CONNECTION_TIMEOUT=20s\
+	TIMEOUT=50s\
 	SERVER_NAME=localhost\
-	PROCESSES=auto\
-	CONNECTIONS=131070\
+	PROCESSES=\
+	PROCESSES_PROC_PERC=300\
+	CONNECTIONS=\
+	CONNECTIONS_MEM_PERC=1000\
 	AIO_REQUESTS=16384\
-	THREADS=32\
-	THREAD_QUEUE=262140\
+	THREADS=\
+	THREADS_PROC_PERC=3000\
+	MAX_THREADS=256\
+	THREAD_QUEUE=\
+	THREAD_QUEUE_MEM_PERC=3000\
 	MODSEC_AUDIT_LOG=Off\
 	NO_CERT_RENEW=true\
 	CONF_HOST_NAME=localhost\
-	DDOS_TIME_SLICE=29\
-	DDOS_THRESHOLD=319\
-	DDOS_BLOCK_TIMEOUT=600\
-	DDOS_INTRANET_TIME_SLICE=19\
-	DDOS_INTRANET_THRESHOLD=1379\
+	DDOS_TIME_SLICE=30\
+	DDOS_THRESHOLD=300\
+	DDOS_BLOCK_TIMEOUT=500\
+	DDOS_INTRANET_TIME_SLICE=20\
+	DDOS_INTRANET_THRESHOLD=1300\
 	DDOS_INTRANET_BLOCK_TIMEOUT=180
 
 ENTRYPOINT ["nginx_entrypoint"]

@@ -9,6 +9,10 @@ env > /etc/docker_env
 chmod +x /etc/docker_env
 service cron start
 
+# Tune Nginx opts.
+. /usr/bin/nginx_tune_opts
+nginx_tune_opts
+
 # Sync config.
 nginx_sync_config --no-reload || true
 nginx_variables --no-reload || true

@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.27.0
+ARG NGINX_VERSION=1.27.3
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
@@ -42,7 +42,7 @@ RUN apt update \
 WORKDIR /sources
 
 # Mod security.
-ARG MODSEC_VERSION=3.0.12
+ARG MODSEC_VERSION=3.0.13
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
@@ -54,7 +54,7 @@ RUN wget --quiet https://github.com/SpiderLabs/ModSecurity/releases/download/v${
 	&& cd ..
 
 # VTS.
-ARG VTS_VERSION=0.2.2
+ARG VTS_VERSIONv0.2.3
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \

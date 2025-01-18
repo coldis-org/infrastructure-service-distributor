@@ -53,7 +53,7 @@ $(ls /etc/nginx/conf.d | sed "s#^#/etc/nginx/conf.d/#") \
 $(ls /etc/nginx/conf.d/include.d | sed "s#^#/etc/nginx/conf.d/include.d/#") \
 $(ls /etc/nginx/conf.d/general.d | sed "s#^#/etc/nginx/conf.d/general.d/#") \
 $(ls /etc/nginx/conf.d/vhost.d | sed "s#^#/etc/nginx/conf.d/vhost.d/#") \
-$(ls /etc/nginx/vhost.d | sed "s#^#/etc/nginx/vhost.d/#")
+$(ls /etc/nginx/vhost.d | sed "s#^#/etc/nginx/vhost.d/#") \
 "
 fi
 

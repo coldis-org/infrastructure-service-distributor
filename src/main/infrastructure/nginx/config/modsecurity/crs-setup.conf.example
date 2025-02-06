@@ -202,15 +202,15 @@ SecDefaultAction "phase:2,log,auditlog,pass"
 # level results in a performance impact that is equally high as setting
 # tx.blocking_paranoia_level to said level.
 #
-SecAction \
-    "id:900001,\
-    phase:1,\
-    pass,\
-    t:none,\
-    nolog,\
-    tag:'OWASP_CRS',\
-    ver:'OWASP_CRS/4.11.0',\
-    setvar:tx.detection_paranoia_level=2"
+#SecAction \
+#    "id:900001,\
+#    phase:1,\
+#    pass,\
+#    t:none,\
+#    nolog,\
+#    tag:'OWASP_CRS',\
+#    ver:'OWASP_CRS/4.11.0',\
+#    setvar:tx.detection_paranoia_level=1"
 
 
 #
@@ -469,15 +469,15 @@ SecAction \
 # from a security perspective. For static sites, removing the POST is
 # recommended. Add other HTTP methods as seen fit (see above).
 #
-SecAction \
-    "id:900200,\
-    phase:1,\
-    pass,\
-    t:none,\
-    nolog,\
-    tag:'OWASP_CRS',\
-    ver:'OWASP_CRS/4.11.0',\
-    setvar:'tx.allowed_methods=GET HEAD POST PUT DELETE OPTIONS'"
+#SecAction \
+#    "id:900200,\
+#    phase:1,\
+#    pass,\
+#    t:none,\
+#    nolog,\
+#    tag:'OWASP_CRS',\
+#    ver:'OWASP_CRS/4.11.0',\
+#    setvar:'tx.allowed_methods=GET HEAD POST OPTIONS'"
 
 # Content-Types that a client is allowed to send in a request.
 # Default: |application/x-www-form-urlencoded| |multipart/form-data| |text/xml|
@@ -561,15 +561,15 @@ SecAction \
 # (Source: https://en.wikipedia.org/wiki/List_of_archive_formats)
 #
 # Uncomment this rule to change the default.
-SecAction \
-    "id:900240,\
-    phase:1,\
-    pass,\
-    t:none,\
-    nolog,\
-    tag:'OWASP_CRS',\
-    ver:'OWASP_CRS/4.11.0',\
-    setvar:'tx.restricted_extensions=.php/ .asa/ .asax/ .ascx/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pem/ .pol/ .printer/ .pwd/ .rdb/ .resources/ .resx/ .sql/ .swp/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/'"
+#SecAction \
+#    "id:900240,\
+#    phase:1,\
+#    pass,\
+#    t:none,\
+#    nolog,\
+#    tag:'OWASP_CRS',\
+#    ver:'OWASP_CRS/4.11.0',\
+#    setvar:'tx.restricted_extensions=.asa/ .asax/ .ascx/ .backup/ .bak/ .bat/ .cdx/ .cer/ .cfg/ .cmd/ .com/ .config/ .conf/ .cs/ .csproj/ .csr/ .dat/ .db/ .dbf/ .dll/ .dos/ .htr/ .htw/ .ida/ .idc/ .idq/ .inc/ .ini/ .key/ .licx/ .lnk/ .log/ .mdb/ .old/ .pass/ .pdb/ .pem/ .pol/ .printer/ .pwd/ .rdb/ .resources/ .resx/ .sql/ .swp/ .sys/ .vb/ .vbs/ .vbproj/ .vsdisco/ .webinfo/ .xsd/ .xsx/'"
 
 # Restricted request headers.
 # The HTTP request headers that CRS restricts are split into two categories:

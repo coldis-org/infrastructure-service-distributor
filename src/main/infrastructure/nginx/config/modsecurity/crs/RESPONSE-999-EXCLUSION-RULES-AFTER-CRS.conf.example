@@ -1,8 +1,9 @@
 # ------------------------------------------------------------------------
-# OWASP ModSecurity Core Rule Set ver.3.3.2
+# OWASP CRS ver.4.11.0
 # Copyright (c) 2006-2020 Trustwave and contributors. All rights reserved.
+# Copyright (c) 2021-2025 CRS project. All rights reserved.
 #
-# The OWASP ModSecurity Core Rule Set is distributed under
+# The OWASP CRS is distributed under
 # Apache Software License (ASL) version 2
 # Please see the enclosed LICENSE file for full details.
 # ------------------------------------------------------------------------
@@ -35,8 +36,6 @@
 # ModSecurity Rule Exclusion: disable sqli rules for parameter foo.
 # SecRuleUpdateTargetByTag "attack-sqli" "!ARGS:foo"
 
-# Disables paranoia-2 DoS burst.
-SecRuleRemoveById 912171
 
 # -- [[ Changing the Disruptive Action for Anomaly Mode ]] --
 #

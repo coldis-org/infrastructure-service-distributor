@@ -196,7 +196,6 @@ ENV	CERTBOT_PORT=80\
 	REQLIMIT_ZONE_SIZE=100m\
 	DEFAULT_REQLIMIT=100r/m\
 	DEFAULT_TRUSTED_REQLIMIT=4000r/m
-	
 
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

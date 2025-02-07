@@ -118,7 +118,10 @@ do
 
 	# Adds the network to the network options.
 	sed -ie "s|\(# Removes IPs from other networks\.\)|\1\n    \"${NET}\"\t\t\t\"\";|g" ${NEW_NETWORKS_CONF_FILE}
-	
+
+	# Adds the network reqlimit key.
+    sed -ie "s|\(# Defines request limit zones for specific networks\.\)|\1\nlimit_req_zone \$localnet_ip_key zone=one:10m rate=1r/s|" ${NEW_REQLIMIT_CONF_FILE} 
+
 	# Creates a key for the network IP addresses
     echo "
 # Address for ${NET} variable.
@@ -146,6 +149,10 @@ limit_req_zone \$remote_addr_${NET} zone=${NET}_http_limit:${REQLIMIT_ZONE_SIZE}
 	if [ ! -f ${NET_CONF_FILE} ]
 	then
 	    touch ${NET_CONF_FILE}
+    fi
+	if [ ! -f ${NET_HTTP_CONF_FILE} ]
+	then
+	    touch ${NET_HTTP_CONF_FILE}
     fi
     OLD_NET_CONF_FILE=/tmp/access-${NET}.conf.old
     NEW_NET_CONF_FILE=/tmp/access-${NET}.conf.new
@@ -208,12 +215,11 @@ if (\$http_${NET_HEADER_NAME} ${NET_HEADER_VALUE_CHECK} \"${NET_HEADER_VALUE}\")
 				sed -i "/# Entry ${HOST_NUMBER}\.$/!b;n;c ${NEW_HOST_CONFIG}" ${NEW_NET_CONF_FILE}
 				
 				# Adds the ip to the network list.
-				sed -ie "s|\(# Network definitions\.\)|\1\n    ${NET_IP}\t\t\t\"${NET}\"\;|" ${NEW_NETWORKS_CONF_FILE}
-		
-				# Adds the network reqlimit key.
-			    sed -ie "s|\(# Defines request limit zones for specific networks\.\)|\1\nlimit_req_zone \$localnet_ip_key zone=one:10m rate=1r/s|" ${NEW_REQLIMIT_CONF_FILE} 
-
-		
+				if ! ( cat ${NEW_NETWORKS_CONF_FILE} | grep -q "${NET_IP}" )
+				then
+					sed -ie "s|\(# Network definitions\.\)|\1\n    ${NET_IP}\t\t\t\"${NET}\"\;|" ${NEW_NETWORKS_CONF_FILE}
+				fi
+				
 			# If the Intranet IP is not valid.
 			else
 				${DEBUG} && echo "Invalid net IP: ${NET_IP}"

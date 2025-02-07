@@ -45,7 +45,7 @@ nginx_tune_opts() {
 	# Max memory.
 	if [ -z "${MAX_MEMORY}" ]
 	then
-		MAX_MEMORY=$(memory_limit || echo "error")
+		MAX_MEMORY=$( memory_limit || echo "error" )
 	fi
 	if [ -z "${MAX_MEMORY}" ] || [ "${MAX_MEMORY}" = "error" ] || [ ${MAX_MEMORY} -le 0 ]
 	then
@@ -54,11 +54,16 @@ nginx_tune_opts() {
 	MAX_MEMORY=$((MAX_MEMORY / 1024 / 1024)) # MB
 
 	
-	if [ -z "${PROCESSES}" ]
+	if [ -z "${PROCESSES}" ] && [ ! -z "${PROCESSES_PROC_PERC}" ]
 	then
 		PROCESSES=$(( PROCESSES_PROC_PERC * MAX_CPU / CPU_UNIT / 100 ))
 	fi
-	PROCESSES=$((PROCESSES < 1 ? 1 : PROCESSES))
+	if [ -z "${PROCESSES}" ]
+    then
+        PROCESSES="auto"
+    else 
+		PROCESSES=$(( PROCESSES < 1 ? 1 : PROCESSES ))
+    fi
 
 	if [ -z "${THREADS}" ]
 	then
@@ -76,7 +81,7 @@ nginx_tune_opts() {
 	then
 		KEEPALIVE_REQUESTS=$(( KEEPALIVE_REQUESTS_MEM_PERC * MAX_MEMORY / 100 ))
 	fi
-	KEEPALIVE_REQUESTS=$((KEEPALIVE_REQUESTS > MAX_KEEPALIVE_REQUESTS ? MAX_KEEPALIVE_REQUESTS : KEEPALIVE_REQUESTS))
+	KEEPALIVE_REQUESTS=$(( KEEPALIVE_REQUESTS > MAX_KEEPALIVE_REQUESTS ? MAX_KEEPALIVE_REQUESTS : KEEPALIVE_REQUESTS ))
 
 	
 	if [ -z "${THREAD_QUEUE}" ]

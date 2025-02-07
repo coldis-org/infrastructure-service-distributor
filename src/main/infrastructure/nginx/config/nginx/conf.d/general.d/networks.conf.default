@@ -1,0 +1,16 @@
+
+# Limits for specific networks.
+geo $network {
+    default			"generalnet";
+    # Network definitions.
+    
+}
+
+# Address for general network variable.
+map $network $remote_addr_general_network {
+    default			$binary_remote_addr;
+    # Removes IPs from other networks.
+}
+
+# Address for specific networks variables.
+

@@ -1,0 +1,5 @@
+
+# Defines request limit zones for general networks.
+limit_req_zone $binary_remote_addr zone=all_networks_http_limit:${REQLIMIT_ZONE_SIZE} rate=${DEFAULT_REQLIMIT};
+limit_req_zone $remote_addr_general_network zone=general_network_http_limit:${REQLIMIT_ZONE_SIZE} rate=${DEFAULT_REQLIMIT};
+

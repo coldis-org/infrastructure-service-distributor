@@ -133,7 +133,7 @@ map \$network \$remote_addr_${NET} {
 	eval "REQLIMIT_RATE=\${${REQLIMIT_RATE_VAR}:=}"
 	if [ -z "${REQLIMIT_RATE}" ]
     then
-        REQLIMIT_RATE="${DEFAULT_TRUSTED_REQLIMIT}"
+        REQLIMIT_RATE="${DEFAULT_TRUSTED_REQLIMIT_RATIO}"
     fi
 	echo "
 # Defines request limit zones for ${NET} network.
@@ -227,7 +227,8 @@ done
 
 # Reloads the configuration if the file has been updated.
 CONFIG_UPDATED=true
-if diff -q "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" > /dev/null && \
+if ( ! ${SKIP_RELOAD} ) && \
+	diff -q "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" > /dev/null && \
 	diff -q "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" > /dev/null && \
 	diff -q "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}" > /dev/null && \
 	diff -q "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" > /dev/null && \

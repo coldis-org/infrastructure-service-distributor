@@ -184,8 +184,10 @@ include ${NET_CONF_FILE};
     	fi
     	echo "
 # Validates the header.
-if (\$http_${NET_HEADER_NAME} ${NET_HEADER_VALUE_CHECK} \"${NET_HEADER_VALUE}\") {
-    return 403;
+if (\$network = \"${NET}\") {
+	if (\$http_${NET_HEADER_NAME} ${NET_HEADER_VALUE_CHECK} \"${NET_HEADER_VALUE}\") {
+	    return 403;
+	}
 }
 " >> ${NEW_NET_HTTP_CONF_FILE}
     fi

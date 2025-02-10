@@ -55,6 +55,7 @@ ${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
 ${DEBUG} && echo "hostname=$(hostname)"
 
 # If host config should be syncd.
+SYNC_DIFF=false
 if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
@@ -73,26 +74,30 @@ then
 	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
 
+    # If there are differences, sync them.
 	if ! diff -rq ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
-		${SKIP_RELOAD} || nginx_check_config
+		SYNC_DIFF=true
 	fi
-
 	if ! diff -rq ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
-		${SKIP_RELOAD} || nginx_check_config
+		SYNC_DIFF=true
 	fi
-	
 	if ! diff -rq ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
-		${SKIP_RELOAD} || nginx_check_config
+		SYNC_DIFF=true
 	fi
 
 fi
 
+# If the config should be reloaded, reload it.
+if [ "${SYNC_DIFF}" != "false" ]
+then
+	${SKIP_RELOAD} || nginx_check_config
+fi

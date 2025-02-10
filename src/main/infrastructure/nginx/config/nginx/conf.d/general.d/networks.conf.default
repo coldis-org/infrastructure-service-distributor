@@ -6,6 +6,12 @@ geo $network {
     
 }
 
+# Address for all networks except local network.
+map $network $remote_addr_except_local_network {
+    default			$binary_remote_addr;
+    # Removes IPs from local network.
+}
+
 # Address for general network variable.
 map $network $remote_addr_general_network {
     default			$binary_remote_addr;

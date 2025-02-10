@@ -1,0 +1,5 @@
+
+# Configures request limits.
+limit_req zone=all_networks_http_limit nodelay;
+limit_req zone=except_local_networks_http_limit nodelay;
+limit_req zone=general_network_http_limit nodelay;

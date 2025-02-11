@@ -26,11 +26,6 @@ while :; do
 			DEBUG_OPT="--debug"
 			;;
 
-		# If no reload should be performed.
-		--no-reload)
-			SKIP_RELOAD=true
-			;;
-			
 		# Other option.
 		?*)
 			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
@@ -99,11 +94,13 @@ then
 
 fi
 
-# If the config should be reloaded, reload it.
-if [ "${SYNC_DIFF}" != "false" ]
+# Returns if the configuration was updated.
+if ${SYNC_DIFF}
 then
-	echo "Changes detected when synching config. Reloading config."
-	${SKIP_RELOAD} || nginx_check_config
+	echo "Changes detected when synching config. Should reload configuration."
+    return 0
 else 
-	echo "No changes detected when synching config. No need to reload config."
+	echo "No changes detected when synching config. Should not reload configuration."
+    return 1
 fi
+

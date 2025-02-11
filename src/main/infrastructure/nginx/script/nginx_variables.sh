@@ -3,8 +3,6 @@
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
-SKIP_RELOAD=false
-SKIP_RELOAD_PARAM=""
 
 # For each argument.
 while :; do
@@ -22,13 +20,6 @@ while :; do
 			shift
 			;;
 			
-		# If actual reload should be done.
-		--no-reload)
-			SKIP_RELOAD=true
-			SKIP_RELOAD_PARAM="--no-reload"
-			;;
-			
-		# No more options.
 		*)
 			break
 

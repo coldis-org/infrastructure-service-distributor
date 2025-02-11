@@ -8,6 +8,8 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 SKIP_RELOAD=false
 SKIP_RELOAD_PARAM=""
+RELOAD_ONLY_IF_ERRORS_CHANGE=false
+ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf.err
 
 # For each argument.
 while :; do
@@ -17,6 +19,11 @@ while :; do
 		--debug)
 			DEBUG=true
 			DEBUG_OPT="--debug"
+			;;
+			
+		# If actual reload should be done only if errors change.
+		--only-if-errors-change)
+			RELOAD_ONLY_IF_ERRORS_CHANGE=true
 			;;
 			
 		# If actual reload should be done.
@@ -40,6 +47,7 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'nginx_check_config'"
 
 # Error files.
+INITIAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} || true)
 nginx_revert_config_errors ${DEBUG_OPT}
 
 # Test files with errors.
@@ -78,12 +86,33 @@ do
 	NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
 	${DEBUG} && echo ${NGINX_ERROR}
 done
-FINAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} 2>/dev/null)
+FINAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} || true)
+${DEBUG} && echo "INITIAL_ERROR_FILES=${INITIAL_ERROR_FILES}"
+${DEBUG} && echo "FINAL_ERROR_FILES=${FINAL_ERROR_FILES}"
+ERROR_FILES_NOT_CHANGED=$([ "${INITIAL_ERROR_FILES}" = "${FINAL_ERROR_FILES}" ])
+${DEBUG} && echo "ERROR_FILES_NOT_CHANGED=${ERROR_FILES_NOT_CHANGED}"
+${ERROR_FILES_NOT_CHANGED} || echo "Error files changed."
 
-# Reloads config.
-${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
-${SKIP_RELOAD} || nginx -s reload
+# Reloads configuration.
+SHOULD_RELOAD=false
+if ${SKIP_RELOAD}
+then
+    echo "Skipping reload."
+else
+    if ${RELOAD_ONLY_IF_ERRORS_CHANGE}
+    then
+    	SHOULD_RELOAD=${ERROR_FILES_CHANGED}
+    else
+    	SHOULD_RELOAD=true
+    fi
+fi
+if ${SHOULD_RELOAD}
+then
+	${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
+	${SKIP_RELOAD} || nginx -s reload
+fi
 
+# Returns if the configuration is valid.
 if ${CONFIG_VALID}
 then
 	return 0

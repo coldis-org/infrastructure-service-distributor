@@ -16,9 +16,9 @@ service cron start
 nginx_tune_opts
 
 # Sync config.
-nginx_sync_config --no-reload || true
-nginx_variables --no-reload || true
-nginx_update_nets --no-reload || true
+nginx_sync_config || true
+nginx_variables || true
+nginx_update_nets || true
 nginx_check_config --no-reload || true
 
 # Runs original command.

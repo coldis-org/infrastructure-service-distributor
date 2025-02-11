@@ -23,12 +23,6 @@ while :; do
 			DEBUG_OPT="--debug"
 			;;
 			
-		# If actual reload should be done.
-		--no-reload)
-			SKIP_RELOAD=true
-			SKIP_RELOAD_PARAM="--no-reload"
-			;;
-			
 		# Other option.
 		?*)
 			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
@@ -261,8 +255,7 @@ done
 
 # Reloads the configuration if the file has been updated.
 CONFIG_UPDATED=true
-if ( ! ${SKIP_RELOAD} ) && \
-	diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" && \
+if diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" && \
 	diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" && \
 	diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" && \
 	diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" && \
@@ -274,17 +267,12 @@ fi
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
-	echo "Changes detected in network files. Reloading configuration."
 	cp -f ${NEW_LOCALNET_CONF_FILE} ${LOCALNET_CONF_FILE}
 	cp -f ${NEW_NET_CONF_FILE} ${NET_CONF_FILE}
 	cp -f ${NEW_NET_HTTP_CONF_FILE} ${NET_HTTP_CONF_FILE}
 	cp -f ${NEW_REQLIMITZONE_CONF_FILE} ${REQLIMITZONE_CONF_FILE}
 	cp -f ${NEW_REQLIMIT_CONF_FILE} ${REQLIMIT_CONF_FILE}
 	cp -f ${NEW_NETWORKS_CONF_FILE} ${NETWORKS_CONF_FILE}
-	nginx_variables ${SKIP_RELOAD_PARAM}
-	nginx_check_config ${SKIP_RELOAD_PARAM}
-else 
-	echo "No changes detected in network files. No need to reload configuration."
 fi
 
 # Removes temporary files.
@@ -295,5 +283,13 @@ rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
 	${OLD_LOCALNET_CONF_FILE} ${NEW_LOCALNET_CONF_FILE} \
 	${OLD_NETWORKS_CONF_FILE} ${NEW_NETWORKS_CONF_FILE} 
 
-
+# Returns if the configuration was updated.
+if ${CONFIG_UPDATED}
+then
+	echo "Changes detected in network files. Should reload configuration."
+	return 0
+else 
+	echo "No changes detected in network files. Should not reload configuration."
+	return 1
+fi
 

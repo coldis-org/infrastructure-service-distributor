@@ -52,7 +52,15 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'nginx_update_nets'"
 
-# Prepares netowors config.
+# Removes temporary files.
+rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
+	${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE} \
+	${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
+	${OLD_REQLIMIT_CONF_FILE} ${NEW_REQLIMIT_CONF_FILE} \
+	${OLD_LOCALNET_CONF_FILE} ${NEW_LOCALNET_CONF_FILE} \
+	${OLD_NETWORKS_CONF_FILE} ${NEW_NETWORKS_CONF_FILE} 
+
+# Prepares network config.
 NETWORKS_CONF_FILE=${GENERAL_CONF_FILE_PATH}/networks.conf
 if [ ! -f ${NETWORKS_CONF_FILE} ]
 then
@@ -135,13 +143,16 @@ do
     sed -ie "s|\(# Defines request limit zones for specific networks\.\)|\1\nlimit_req_zone \$localnet_ip_key zone=one:10m rate=1r/s|" ${NEW_REQLIMITZONE_CONF_FILE} 
 
 	# Creates a key for the network IP addresses
-    echo "
-# Address for ${NET} variable.
-map \$network \$remote_addr_${NET} {
-	"${NET}"				\$binary_remote_addr;
-    default			\"\";
-}
-" >> ${NEW_NETWORKS_CONF_FILE}
+	if ! ( cat ${NEW_NETWORKS_CONF_FILE} | grep -q "map \$network \$remote_addr_${NET} {" )
+	then
+	    echo "
+	# Address for ${NET} variable.
+	map \$network \$remote_addr_${NET} {
+		"${NET}"				\$binary_remote_addr;
+	    default			\"\";
+	}
+	" >> ${NEW_NETWORKS_CONF_FILE}
+	fi
 
 	# Creates the reqlimit zone for the network.
     REQLIMIT_RATE_VAR=$(echo "${NET}_REQLIMIT" | tr '[:lower:]' '[:upper:]')
@@ -251,32 +262,38 @@ done
 # Reloads the configuration if the file has been updated.
 CONFIG_UPDATED=true
 if ( ! ${SKIP_RELOAD} ) && \
-	diff -q "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" > /dev/null && \
-	diff -q "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" > /dev/null && \
-	diff -q "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" > /dev/null && \
-	diff -q "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" > /dev/null && \
-	diff -q "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" > /dev/null && \
-	diff -q "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}" > /dev/null
+	diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" && \
+	diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" && \
+	diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" && \
+	diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" && \
+	diff "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" && \
+	diff "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}"
 then
     CONFIG_UPDATED=false
 fi
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
+	echo "Changes detected in network files. Reloading configuration."
 	cp -f ${NEW_LOCALNET_CONF_FILE} ${LOCALNET_CONF_FILE}
 	cp -f ${NEW_NET_CONF_FILE} ${NET_CONF_FILE}
 	cp -f ${NEW_NET_HTTP_CONF_FILE} ${NET_HTTP_CONF_FILE}
 	cp -f ${NEW_REQLIMITZONE_CONF_FILE} ${REQLIMITZONE_CONF_FILE}
 	cp -f ${NEW_REQLIMIT_CONF_FILE} ${REQLIMIT_CONF_FILE}
 	cp -f ${NEW_NETWORKS_CONF_FILE} ${NETWORKS_CONF_FILE}
-	rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
-		${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE} \
-		${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
-		${OLD_REQLIMIT_CONF_FILE} ${NEW_REQLIMIT_CONF_FILE} \
-		${OLD_LOCALNET_CONF_FILE} ${NEW_LOCALNET_CONF_FILE} \
-		${OLD_NETWORKS_CONF_FILE} ${NEW_NETWORKS_CONF_FILE} 
 	nginx_variables ${SKIP_RELOAD_PARAM}
 	nginx_check_config ${SKIP_RELOAD_PARAM}
+else 
+	echo "No changes detected in network files. No need to reload configuration."
 fi
+
+# Removes temporary files.
+rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
+	${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE} \
+	${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
+	${OLD_REQLIMIT_CONF_FILE} ${NEW_REQLIMIT_CONF_FILE} \
+	${OLD_LOCALNET_CONF_FILE} ${NEW_LOCALNET_CONF_FILE} \
+	${OLD_NETWORKS_CONF_FILE} ${NEW_NETWORKS_CONF_FILE} 
+
 
 

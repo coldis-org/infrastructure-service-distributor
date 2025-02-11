@@ -11,9 +11,10 @@ SKIP_RELOAD_PARAM=""
 VHOSTS=/etc/nginx/vhost.d
 STREAM=/etc/nginx/stream.d
 CERTS=/etc/letsencrypt
-VHOSTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/vhost
-CERTS_TMP=/tmp/nginx/${CONF_HOST_NAME}/cert
-STREAM_TMP=/tmp/nginx/${CONF_HOST_NAME}/stream
+CONFIG_TMP=/tmp/nginx/${CONF_HOST_NAME}
+VHOSTS_TMP=${CONFIG_TMP}/vhost
+CERTS_TMP=${CONFIG_TMP}/cert
+STREAM_TMP=${CONFIG_TMP}/stream
 
 # For each argument.
 while :; do
@@ -66,7 +67,7 @@ then
 	rm -rf ${STREAM_TMP}/*
 	
 	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
-	# Exit if config distributor is down
+	# Exit if config distributor is down.
 	if [ $? -ne 0 ]; then
 		${DEBUG} && echo "Failed to download folder"
 		exit 0
@@ -75,19 +76,21 @@ then
 	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
 
     # If there are differences, sync them.
-	if ! diff -rq ${CERTS} ${CERTS_TMP}
+    nginx_revert_config_errors
+    nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*.conf.err"
+	if ! diff -r ${CERTS} ${CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
 		mv ${CERTS_TMP}/* ${CERTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -rq ${VHOSTS} ${VHOSTS_TMP}
+	if ! diff -r ${VHOSTS} ${VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${VHOSTS_TMP}/* ${VHOSTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -rq ${STREAM} ${STREAM_TMP}
+	if ! diff -r ${STREAM} ${STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
 		mv ${STREAM_TMP}/* ${STREAM}/
@@ -99,5 +102,8 @@ fi
 # If the config should be reloaded, reload it.
 if [ "${SYNC_DIFF}" != "false" ]
 then
+	echo "Changes detected when synching config. Reloading config."
 	${SKIP_RELOAD} || nginx_check_config
+else 
+	echo "No changes detected when synching config. No need to reload config."
 fi

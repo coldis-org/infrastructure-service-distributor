@@ -40,25 +40,7 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'nginx_check_config'"
 
 # Error files.
-ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf.err
-INITIAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} 2>/dev/null)
-for ERROR_FILE in ${ERROR_FILES_NAME_PATTERN}
-do
-	
-	if [ -f "${ERROR_FILE}" ]
-	then
-		# If the original file exists, removes the error file.
-		ORIGINAL_FILE=$(echo "${ERROR_FILE}" | sed "s/.err$//")
-		if [ -f "${ORIGINAL_FILE}" ]
-		then
-			rm ${ERROR_FILE}
-		# If the original file does not exist, changes it back to the original name to test it.
-		else
-			mv ${ERROR_FILE} ${ORIGINAL_FILE}
-		fi
-	fi
-
-done
+nginx_revert_config_errors ${DEBUG_OPT}
 
 # Test files with errors.
 ${DEBUG} && nginx -t || true
@@ -99,12 +81,8 @@ done
 FINAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} 2>/dev/null)
 
 # Reloads config.
-if [ "${INITIAL_ERROR_FILES}" != "${FINAL_ERROR_FILES}" ]
-then
-    ${DEBUG} && echo "Reloading config"
-    ${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
-    ${SKIP_RELOAD} || nginx -s reload
-fi
+${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
+${SKIP_RELOAD} || nginx -s reload
 
 if ${CONFIG_VALID}
 then

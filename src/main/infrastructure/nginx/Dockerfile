@@ -138,8 +138,7 @@ RUN apt-get update -y \
 
 # Configures scheduled jobs (cert and intranet updates)
 COPY cron /etc/cron.d
-RUN chmod -R 0644 /etc/cron.d/ \
-	&& crontab /etc/cron.d/nginx_jobs
+RUN chmod -R 0644 /etc/cron.d/
 
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
@@ -164,6 +163,8 @@ RUN mkdir -p /etc/nginx/upstream.d
 RUN chown -R nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
 ENV	CERTBOT_PORT=80\
+	CERT_UPDATE_SCHEDULE="0 0 * * *"\
+	CONFIG_UPDATE_SCHEDULE="* * * * *"\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\

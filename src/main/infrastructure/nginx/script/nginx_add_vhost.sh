@@ -67,7 +67,7 @@ ${DEBUG} && cat ${VHOST}.tmp
 # Updates the file only if it has changed.
 touch ${VHOST}
 nginx_variables --files ${VHOST}.tmp
-if !(diff -s ${VHOST} ${VHOST}.tmp)
+if !(diff -sq ${VHOST} ${VHOST}.tmp)
 then
 	# Changes the configuration.
 	mv ${VHOST} ${VHOST}.old

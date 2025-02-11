@@ -1,4 +1,4 @@
-0 0 * * * set -a; . /etc/docker_env; set +a; nginx_cert_renew >> /proc/1/fd/1 2>&1
-0 0 * * * set -a; . /etc/docker_env; set +a; nginx_session_ticket >> /proc/1/fd/1 2>&1
-* * * * * set -a; . /etc/docker_env; set +a; nginx_update_nets >> /proc/1/fd/1 2>&1
-* * * * * set -a; . /etc/docker_env; set +a; nginx_sync_config >> /proc/1/fd/1 2>&1
+${CERT_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_cert_renew >> /proc/1/fd/1 2>&1
+${CERT_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_session_ticket >> /proc/1/fd/1 2>&1
+${CONFIG_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_update_nets >> /proc/1/fd/1 2>&1
+${CONFIG_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_sync_config >> /proc/1/fd/1 2>&1

@@ -7,6 +7,8 @@ nginx_install_cert --self-signed "/C=BR/ST=SaoPaulo/L=SaoPaulo/O=SuperSim/OU=Com
 # Starts cron.
 env > /etc/docker_env
 chmod +x /etc/docker_env
+envsubst < /etc/cron.d/nginx_jobs > /etc/cron.d/nginx_jobs
+crontab /etc/cron.d/nginx_jobs
 service cron start
 
 # Tune Nginx opts.

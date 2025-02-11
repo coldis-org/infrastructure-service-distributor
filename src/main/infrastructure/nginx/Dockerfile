@@ -162,6 +162,7 @@ RUN mkdir -p /etc/nginx/upstream.d
 # Changes default permissions.
 RUN chown -R nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
+# Environment variables.
 ENV	CERTBOT_PORT=80\
 	CERT_UPDATE_SCHEDULE="0 0 * * *"\
 	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\

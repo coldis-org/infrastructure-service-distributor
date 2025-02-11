@@ -161,7 +161,7 @@ limit_req_zone \$remote_addr_${NET} zone=${NET}_http_limit:${REQLIMIT_ZONE_SIZE}
 " >> ${NEW_REQLIMITZONE_CONF_FILE}
 	
 	# Adds the request limit for the network.
-	sed -ie "s|\(# Configures request limits\.\)|\1\nlimit_req zone=${NET}_http_limit nodelay;|" ${REQLIMIT_CONF_FILE}
+	sed -ie "s|\(# Configures request limits\.\)|\1\nlimit_req zone=${NET}_http_limit nodelay;|" ${NEW_REQLIMITZONE_CONF_FILE}
 
 	# Creates the access files.
 	NET_CONF_FILE=${INCLUDE_CONF_FILE_PATH}/access-${NET}.conf

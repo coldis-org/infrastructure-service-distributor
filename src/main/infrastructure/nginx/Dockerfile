@@ -164,7 +164,7 @@ RUN chown -R nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecur
 
 ENV	CERTBOT_PORT=80\
 	CERT_UPDATE_SCHEDULE="0 0 * * *"\
-	CONFIG_UPDATE_SCHEDULE="* * * * *"\
+	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\

@@ -118,8 +118,6 @@ then
 	sed -ie "s|\(# Removes IPs from other networks\.\)|\1\n    \"localnet\"\t\t\t\"\";|" ${NEW_NETWORKS_CONF_FILE}
 	sed -ie "s|\(# Removes IPs from local network\.\)|\1\n    \"localnet\"\t\t\t\"\";|" ${NEW_NETWORKS_CONF_FILE}
 
-else
-    echo "" > ${LOCALNET_CONF_FILE}
 fi
 
 # For each available net.

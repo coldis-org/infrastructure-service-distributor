@@ -97,17 +97,24 @@ ${ERROR_FILES_NOT_CHANGED} || echo "Error files changed."
 SHOULD_RELOAD=false
 if ${SKIP_RELOAD}
 then
-    echo "Skipping reload."
+    echo "No reloading defined."
 else
     if ${RELOAD_ONLY_IF_ERRORS_CHANGE}
     then
-    	SHOULD_RELOAD=${ERROR_FILES_CHANGED}
+    	if ${ERROR_FILES_NOT_CHANGED}
+    	then
+    	    echo "No changes in error files. Skipping reload."
+    		SHOULD_RELOAD=false
+    	else
+    		SHOULD_RELOAD=true
+    	fi
     else
     	SHOULD_RELOAD=true
     fi
 fi
 if ${SHOULD_RELOAD}
 then
+	echo "Reloading configuration."
 	${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
 	${SKIP_RELOAD} || nginx -s reload
 fi

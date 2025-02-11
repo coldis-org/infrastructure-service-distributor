@@ -38,10 +38,16 @@ ${DEBUG} && echo "Running 'nginx_update_all_config'"
 SHOULD_RELOAD=false
 
 # Updates network configuration.
-SHOULD_RELOAD=(${SHOULD_RELOAD} || (nginx_update_nets ${DEBUG_OPT}))
+if nginx_update_nets ${DEBUG_OPT}
+then
+    SHOULD_RELOAD=true
+fi
 
 # Syncs configuration files.
-SHOULD_RELOAD=(${SHOULD_RELOAD} || (nginx_sync_config ${DEBUG_OPT}))
+if nginx_sync_config ${DEBUG_OPT}
+then
+    SHOULD_RELOAD=true
+fi
 
 # Checks configuration and reloads configuration if needed.
 ONLY_IF_ERRORS_CHANGE_OPT="--only-if-errors-change"

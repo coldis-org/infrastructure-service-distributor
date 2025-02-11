@@ -6,8 +6,7 @@ COPY config/nginx /etc/nginx
 
 # Configures scheduled jobs (cert and intranet updates).
 COPY cron /etc/cron.d
-RUN chmod -R 0644 /etc/cron.d/ && \
-	crontab /etc/cron.d/nginx_config_jobs
+RUN chmod -R 0644 /etc/cron.d/
 	
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
@@ -22,3 +21,6 @@ RUN chmod -R 755 /opt/nginx-script && \
 # Variables.
 ENV METRICSLOG=/dev/null
 
+# Entrypoint.
+ENTRYPOINT ["nginx_config_entrypoint"]
+CMD ["nginx", "-g", "daemon off;"]

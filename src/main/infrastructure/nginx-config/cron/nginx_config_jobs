@@ -1,1 +1,0 @@
-* * * * * set -a; . /etc/docker_env; set +a; nginx_expose_conf >> /proc/1/fd/1 2>&1

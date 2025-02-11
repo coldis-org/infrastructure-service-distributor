@@ -1,0 +1,4 @@
+${CERT_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_update_all_certs >> /proc/1/fd/1 2>&1
+${CONFIG_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_expose_conf >> /proc/1/fd/1 2>&1
+${CONFIG_UPDATE_SCHEDULE} set -a; . /etc/docker_env; set +a; nginx_update_all_config >> /proc/1/fd/1 2>&1
+

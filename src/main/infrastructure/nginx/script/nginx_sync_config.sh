@@ -11,10 +11,14 @@ SKIP_RELOAD_PARAM=""
 VHOSTS=/etc/nginx/vhost.d
 STREAM=/etc/nginx/stream.d
 CERTS=/etc/letsencrypt
-CONFIG_TMP=/tmp/nginx/${CONF_HOST_NAME}
-VHOSTS_TMP=${CONFIG_TMP}/vhost
-CERTS_TMP=${CONFIG_TMP}/cert
-STREAM_TMP=${CONFIG_TMP}/stream
+CONFIG_TMP=/tmp/nginx
+OLD_CONFIG_TMP=${CONFIG_TMP}/old/${CONF_HOST_NAME}
+OLD_VHOSTS_TMP=${OLD_CONFIG_TMP}/vhost
+OLD_STREAM_TMP=${OLD_CONFIG_TMP}/stream
+NEW_CONFIG_TMP=${CONFIG_TMP}/new/${CONF_HOST_NAME}
+NEW_VHOSTS_TMP=${NEW_CONFIG_TMP}/vhost
+NEW_CERTS_TMP=${NEW_CONFIG_TMP}/cert
+NEW_STREAM_TMP=${NEW_CONFIG_TMP}/stream
 
 # For each argument.
 while :; do
@@ -56,39 +60,43 @@ if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "
 then
 
 	${DEBUG} && echo "Synching config"
-	# Downloads data.
-	rm -rf ${VHOSTS_TMP}/* 
-	rm -rf ${CERTS_TMP}/*
-	rm -rf ${STREAM_TMP}/*
+	# Prepares folders.
+	rm -rf ${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
+			${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
+	mkdir -p ${VHOSTS} ${CERTS} ${STREAM} \
+			${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
+			${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
+	cp -rf ${VHOSTS}/* ${OLD_VHOSTS_TMP}
+	cp -rf ${STREAM}/* ${OLD_STREAM_TMP}
 	
-	wget --recursive --no-parent -q -R "index.html*" -P ${VHOSTS_TMP}/../.. ${CONF_HOST_NAME}/vhost/
+	# Downloads the configuration.
+	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
 	# Exit if config distributor is down.
 	if [ $? -ne 0 ]; then
 		${DEBUG} && echo "Failed to download folder"
 		exit 0
 	fi
-	wget --recursive --no-parent -q -R "index.html*" -P ${CERTS_TMP}/../.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
-	wget --recursive --no-parent -q -R "index.html*" -P ${STREAM_TMP}/../.. ${CONF_HOST_NAME}/stream/
+	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
+	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
 
     # If there are differences, sync them.
-    nginx_revert_config_errors
-    nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*.conf.err"
-	if ! diff -r ${CERTS} ${CERTS_TMP}
+    nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"
+	if ! diff -r ${CERTS} ${NEW_CERTS_TMP}
 	then
 		rm -rf ${CERTS}/*
-		mv ${CERTS_TMP}/* ${CERTS}/
+		mv ${NEW_CERTS_TMP}/* ${CERTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -r ${VHOSTS} ${VHOSTS_TMP}
+	if ! diff -r ${OLD_VHOSTS_TMP} ${NEW_VHOSTS_TMP}
 	then
 		rm -rf ${VHOSTS}/*
-		mv ${VHOSTS_TMP}/* ${VHOSTS}/
+		mv ${NEW_VHOSTS_TMP}/* ${VHOSTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -r ${STREAM} ${STREAM_TMP}
+	if ! diff -r ${OLD_STREAM_TMP} ${NEW_STREAM_TMP}
 	then
 		rm -rf ${STREAM}/*
-		mv ${STREAM_TMP}/* ${STREAM}/
+		mv ${NEW_STREAM_TMP}/* ${STREAM}/
 		SYNC_DIFF=true
 	fi
 

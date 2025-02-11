@@ -9,7 +9,7 @@ DEBUG_OPT=
 SKIP_RELOAD=false
 SKIP_RELOAD_PARAM=""
 RELOAD_ONLY_IF_ERRORS_CHANGE=false
-ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf.err
+NO_ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf
 
 # For each argument.
 while :; do
@@ -47,7 +47,7 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'nginx_check_config'"
 
 # Error files.
-INITIAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} || true)
+INITIAL_NO_ERROR_FILES=$(ls ${NO_ERROR_FILES_NAME_PATTERN} || true)
 nginx_revert_config_errors ${DEBUG_OPT}
 
 # Test files with errors.
@@ -86,12 +86,22 @@ do
 	NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
 	${DEBUG} && echo ${NGINX_ERROR}
 done
-FINAL_ERROR_FILES=$(ls ${ERROR_FILES_NAME_PATTERN} || true)
-${DEBUG} && echo "INITIAL_ERROR_FILES=${INITIAL_ERROR_FILES}"
-${DEBUG} && echo "FINAL_ERROR_FILES=${FINAL_ERROR_FILES}"
-ERROR_FILES_NOT_CHANGED=$([ "${INITIAL_ERROR_FILES}" = "${FINAL_ERROR_FILES}" ])
-${DEBUG} && echo "ERROR_FILES_NOT_CHANGED=${ERROR_FILES_NOT_CHANGED}"
-${ERROR_FILES_NOT_CHANGED} || echo "Error files changed."
+FINAL_NO_ERROR_FILES=$(ls ${NO_ERROR_FILES_NAME_PATTERN} || true)
+
+# Checks if there are new configuration files withou errors.
+SHOULD_CONTAIN_LIST=${INITIAL_NO_ERROR_FILES}
+TO_BE_CONTAINED_LIST=${FINAL_NO_ERROR_FILES}
+NEW_FILES_WITHOUT_ERRORS=false
+for TO_BE_CONTAINED_ITEM in ${TO_BE_CONTAINED_LIST}
+do
+	if ! echo ${SHOULD_CONTAIN_LIST} | grep -q ${TO_BE_CONTAINED_ITEM}
+    then
+    	echo "New file without errors: ${TO_BE_CONTAINED_ITEM}"
+        NEW_FILES_WITHOUT_ERRORS=true
+        break
+    fi
+done
+${DEBUG} && echo "NEW_FILES_WITHOUT_ERRORS=${NEW_FILES_WITHOUT_ERRORS}"
 
 # Reloads configuration.
 SHOULD_RELOAD=false
@@ -101,12 +111,13 @@ then
 else
     if ${RELOAD_ONLY_IF_ERRORS_CHANGE}
     then
-    	if ${ERROR_FILES_NOT_CHANGED}
+    	if ${NEW_FILES_WITHOUT_ERRORS}
     	then
-    	    echo "No changes in error files. Skipping reload."
-    		SHOULD_RELOAD=false
-    	else
+    		echo "New configuration files without errors."
     		SHOULD_RELOAD=true
+    	else
+    	    echo "No new configuration files without errors. Skipping reload."
+    		SHOULD_RELOAD=false
     	fi
     else
     	SHOULD_RELOAD=true

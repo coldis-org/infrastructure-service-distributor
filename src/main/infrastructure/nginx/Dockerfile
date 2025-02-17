@@ -1,57 +1,45 @@
 # From Nginx image.
 ARG NGINX_VERSION=1.27.4
+ARG BUILD_PROC=16 
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build
 
-RUN apt update \
-	&& apt full-upgrade -y \
-	&& apt-get install -y --no-install-recommends \
-	wget \
-	gcc \
-	make \
-	cmake \
-	build-essential \
-	autoconf \
-	automake \
-	libtool \
-	libcurl4-openssl-dev \
-	liblua5.3-dev \
-	libfuzzy-dev \
-	ssdeep \
-	gettext \
-	pkg-config \
-	libpcre3 \
-	libpcre3-dev \
-	libxml2 \
-	libxml2-dev \
-	libcurl4 \
-	libgeoip-dev \
-	libyajl-dev \
-	doxygen \
-	libpcre2-16-0 \
-	libpcre2-dev \
-	libpcre2-posix3 \
-	zlib1g-dev \
-	git \
-	unzip \
-	uuid-dev \	
-	&& apt-get clean \
-	&& rm -rf /var/lib/apt/lists/*
-
+# Sets the workdir.
 WORKDIR /sources
 
 # Mod security.
 ARG MODSEC_VERSION=3.0.13
-RUN wget --quiet https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
+RUN apt-get update \
+	&& apt-get install -y --no-install-recommends \
+		automake \
+		cmake \
+		doxygen \
+		g++ \
+		git \
+		libcurl4-gnutls-dev \
+		libfuzzy-dev \
+		liblua5.3-dev \
+		libpcre3-dev \
+		libpcre2-dev \
+		libtool \
+		libxml2-dev \
+		libmaxminddb-dev \
+		libyajl-dev \
+		make \
+		patch \
+		pkg-config \
+		ruby \
+		zlib1g-dev \
+		wget \
+	&& wget --quiet https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& mv *modsecurity* modsecurity \
 	&& cd modsecurity \
 	&& ./build.sh \
 	&& ./configure \
-	&& make install \
-	&& cd ..
+	&& make install 
 	
 # VTS.
 ARG VTS_VERSION=0.2.3
@@ -60,49 +48,71 @@ RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${
 	&& rm v${VTS_VERSION}.tar.gz \
 	&& mv *nginx-module-vts* nginx-module-vts 
 
-# Nginx.
+# Modsec module.
 ARG MODSEC_NGINX_VERSION=1.0.3
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/download/v${MODSEC_NGINX_VERSION}/modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& rm modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& mv *modsecurity-nginx* modsecurity-nginx \
-	&& wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
-	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
-	&& rm nginx-${NGINX_VERSION}.tar.gz \
-	&& cd ./nginx-${NGINX_VERSION} \
-	&& ./configure --with-debug --with-compat --with-http_v2_module --add-dynamic-module=../modsecurity-nginx --add-dynamic-module=../nginx-module-vts \
-	&& make modules \
-	&& cp objs/ngx_http_modsecurity_module.so /etc/nginx/modules/ \
-	&& cp objs/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/\
 	&& mkdir /etc/modsecurity.d \
 	&& wget --quiet https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/unicode.mapping \
 	-O /etc/modsecurity.d/unicode.mapping
 
+# Devel kit module.
+ARG NDK_VERSION=v0.3.1
+RUN wget --quiet https://github.com/simpl/ngx_devel_kit/archive/refs/tags/${NDK_VERSION}.tar.gz \
+    && tar -xvzf ${NDK_VERSION}.tar.gz \
+    && rm ${NDK_VERSION}.tar.gz \
+    && mv *ngx_devel_kit* devel-kit
+	
+# Set-misc module.
+ARG SET_MISC_VERSION=0.33
+RUN wget --quiet https://github.com/openresty/set-misc-nginx-module/archive/refs/tags/v${SET_MISC_VERSION}.tar.gz \
+    && tar -xvzf v${SET_MISC_VERSION}.tar.gz \
+    && rm v${SET_MISC_VERSION}.tar.gz \
+    && mv *set-misc* set-misc
+	
+# Builds NGINX.
+RUN wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
+	&& rm nginx-${NGINX_VERSION}.tar.gz \
+	&& cd ./nginx-${NGINX_VERSION} \
+	&& ./configure \
+		--with-debug \
+		--with-compat \
+		--with-http_v2_module \
+		--add-dynamic-module=../modsecurity-nginx \
+		--add-dynamic-module=../nginx-module-vts \
+		--add-dynamic-module=../devel-kit \
+		--add-dynamic-module=../set-misc \
+	&& make -j${BUILD_PROC} \
+	&& make install \
+	&& mkdir -p /etc/nginx/modules \
+	&& cp objs/*.so /etc/nginx/modules/
+
 # From Nginx.
 FROM nginx:${NGINX_VERSION}
 
+# Installs basic packages.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-ENV LD_LIBRARY_PATH=/lib:/usr/lib:/usr/local/lib
 RUN apt-get update \
+	&& apt-get full-upgrade -y \
 	&& apt-get install -y --no-install-recommends \
 	ca-certificates \
 	libcurl4-gnutls-dev \
-	liblua5.3 \
 	libxml2 \
 	moreutils \
-	&& rm -rf /var/lib/apt/lists/* \
+	&& rm -rf /var/lib/apt-get/lists/* \
 	&& apt-get clean \
 	&& mkdir /etc/nginx/ssl
 
 # Copies previous configuration.
-COPY --from=build /usr/local/modsecurity/ /usr/local/modsecurity/
 COPY --from=build /lib/ /lib/
 COPY --from=build /usr/lib/ /usr/lib/
-COPY --from=build /usr/local/lib/ /usr/local/lib/
-COPY --from=build /etc/nginx/modules/ngx_http_modsecurity_module.so /etc/nginx/modules/ngx_http_modsecurity_module.so
+COPY --from=build /usr/local/ /usr/local/
+COPY --from=build /etc/nginx/modules/ /etc/nginx/modules/
 COPY --from=build /etc/modsecurity.d/unicode.mapping /etc/modsecurity.d/unicode.mapping
-COPY --from=build /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so /etc/nginx/modules/ngx_http_vhost_traffic_status_module.so
 
 # Sets locale and UTF-8 charset.
 ENV TZ=America/Sao_Paulo \
@@ -120,13 +130,13 @@ RUN apt-get update -y \
 	&& cp /usr/share/zoneinfo/${TZ} /etc/localtime \
 	&& apt-get purge -y locales \
 	&& apt-get clean -y \
-	&& rm -rf /var/lib/apt/lists/*
+	&& rm -rf /var/lib/apt-get/lists/*
 
 # Installs cron.
 RUN apt-get update -y \
 	&& apt-get install -y cron dnsutils wget \
 	&& apt-get clean -y \
-	&& rm -rf /var/lib/apt/lists/*
+	&& rm -rf /var/lib/apt-get/lists/*
 
 # Installs certbot.
 RUN apt-get update -y \
@@ -134,7 +144,7 @@ RUN apt-get update -y \
 	&& (certbot certonly --non-interactive --agree-tos || true) \
 	&& openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048 \
 	&& apt-get clean -y \
-	&& rm -rf /var/lib/apt/lists/*
+	&& rm -rf /var/lib/apt-get/lists/*
 
 # Configures scheduled jobs (cert and intranet updates)
 COPY cron /etc/cron.d
@@ -152,29 +162,31 @@ RUN chmod -R 755 /opt/nginx-script \
 
 # Copies configuration.
 RUN rm -f /etc/nginx/conf.d/* \
-	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/
+	&& mkdir -p /etc/nginx/vhost.d /etc/nginx/stream.d /var/cache/nginx/ /etc/nginx/upstream.d
 COPY config/modsecurity /etc/modsecurity.d
 COPY config/nginx /etc/nginx
-
-# Create dir to populate later
-RUN mkdir -p /etc/nginx/upstream.d
+COPY html /usr/share/nginx/html
 
 # Changes default permissions.
 RUN chown -R nginx.nginx /var/cache/nginx/ /usr/share/nginx/ /etc/nginx/ /etc/modsecurity.d/
 
 # Environment variables.
 ENV	CERTBOT_PORT=80\
+	CERT_SELF_DOMAIN=/C=BR/ST=SaoPaulo/L=SaoPaulo/O=SuperSim/OU=Com/OU=Br\
+	CERT_SELF_CNS=client\
+	CERT_SELF_OWN_CN=*.supersim.com.br\
 	CERT_UPDATE_SCHEDULE="0 0 * * *"\
 	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\
 	ACCESSLOG=/dev/null\
 	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
 	LOG_BUFFER=3m\
-	LOG_FLUSH=30s\
+	LOG_FLUSH=5s\
 	LOG_LEVEL=warn\
 	DNS_SERVER=\
-	CONNECTION_TIMEOUT=20s\
-	TIMEOUT=50s\
+	CONNECTION_TIMEOUT=15s\
+	TIMEOUT=30s\
+	PROXY_TIMEOUT=120s\
 	WORKER_SHUTDOWN_TIMEOUT=2m\
 	SERVER_NAME=localhost\
 	PROCESSES=\
@@ -199,9 +211,10 @@ ENV	CERTBOT_PORT=80\
 	REQLIMIT_STATUS=429\
 	REQLIMIT_BAN_TIME=300\
 	REQLIMIT_ZONE_SIZE=100m\
-	DEFAULT_REQLIMIT_RATIO=100r/m\
+	DEFAULT_REQLIMIT_BURST=30\
+	DEFAULT_REQLIMIT_RATIO=10r/s\
 	DEFAULT_TRUSTED_REQLIMIT_RATIO=4000r/m\
-	EXCEPT_LOCAL_REQLIMIT_RATIO=10000r/m
+	MAX_REQLIMIT_RATIO=10000r/m
 	
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

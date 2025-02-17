@@ -1,5 +1,10 @@
 
+# Basic request limits.
+include					/etc/nginx/conf.d/include.d/reqlimit-min.conf;
+limit_req				zone=general_network_http_limit			burst=${DEFAULT_REQLIMIT_BURST}		nodelay;
+
+# Configures request limits for identity cookies.
+limit_req				zone=session_cookie_http_limit			burst=${DEFAULT_REQLIMIT_BURST}		nodelay;
+limit_req				zone=durable_session_cookie_http_limit	burst=${DEFAULT_REQLIMIT_BURST}		nodelay;
+
 # Configures request limits.
-limit_req zone=all_networks_http_limit nodelay;
-limit_req zone=except_local_networks_http_limit nodelay;
-limit_req zone=general_network_http_limit nodelay;

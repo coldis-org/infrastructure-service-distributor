@@ -1,8 +1,5 @@
 #!/bin/sh -e
 
-# Creates client certificates.
-nginx_session_ticket --only-if-missing
-nginx_install_cert --self-signed "/C=BR/ST=SaoPaulo/L=SaoPaulo/O=SuperSim/OU=Com/OU=Br/CN=client"
 
 # Starts cron.
 env > /etc/docker_env
@@ -17,8 +14,11 @@ nginx_tune_opts
 
 # Sync config.
 nginx_sync_config || true
+. nginx_install_all_basic_certs || true
 nginx_variables || true
 nginx_update_nets || true
+
+# Checks config.
 nginx_check_config --no-reload || true
 
 # Runs original command.

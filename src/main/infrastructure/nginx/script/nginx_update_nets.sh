@@ -46,6 +46,9 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo "Running 'nginx_update_nets'"
 
+# Default parameters.
+CONFIG_UPDATED=false
+
 # Removes temporary files.
 rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
 	${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE} \
@@ -202,10 +205,12 @@ include ${NET_CONF_FILE};
     	fi
     	echo "
 # Validates the header.
-if (\$network = \"${NET}\") {
-	if (\$http_${NET_HEADER_NAME} ${NET_HEADER_VALUE_CHECK} \"${NET_HEADER_VALUE}\") {
-	    return 403;
-	}
+set \$${NET}_header_check \"\";
+if (\$http_${NET_HEADER_NAME} ${NET_HEADER_VALUE_CHECK} \"${NET_HEADER_VALUE}\") {
+	set \$${NET}_header_check \"\${network}-not-checked\";
+}
+if (\$${NET}_header_check = \"${NET}-not-checked\") {
+	return 403;
 }
 " >> ${NEW_NET_HTTP_CONF_FILE}
     fi
@@ -248,35 +253,43 @@ if (\$network = \"${NET}\") {
 		fi
 	
 	done
+	
+	# Reloads the configuration if the file has been updated.
+	if  ( ! diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" ) || \
+        ( ! diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" )
+    then
+        CONFIG_UPDATED=true
+    fi
+    if ${CONFIG_UPDATED}
+	then
+		cp -f ${NEW_NET_CONF_FILE} ${NET_CONF_FILE}
+		cp -f ${NEW_NET_HTTP_CONF_FILE} ${NET_HTTP_CONF_FILE}
+	fi
+	rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
+        ${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE}
+
 
 done
 
 # Reloads the configuration if the file has been updated.
-CONFIG_UPDATED=true
-if diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" && \
-	diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" && \
-	diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" && \
-	diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" && \
-	diff "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" && \
-	diff "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}"
+if  ( ! diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" ) || \
+	( ! diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" ) || \
+	( ! diff "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" ) || \
+	( ! diff "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}" )
 then
-    CONFIG_UPDATED=false
+    CONFIG_UPDATED=true
 fi
 ${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
 	cp -f ${NEW_LOCALNET_CONF_FILE} ${LOCALNET_CONF_FILE}
-	cp -f ${NEW_NET_CONF_FILE} ${NET_CONF_FILE}
-	cp -f ${NEW_NET_HTTP_CONF_FILE} ${NET_HTTP_CONF_FILE}
 	cp -f ${NEW_REQLIMITZONE_CONF_FILE} ${REQLIMITZONE_CONF_FILE}
 	cp -f ${NEW_REQLIMIT_CONF_FILE} ${REQLIMIT_CONF_FILE}
 	cp -f ${NEW_NETWORKS_CONF_FILE} ${NETWORKS_CONF_FILE}
 fi
 
 # Removes temporary files.
-rm -f ${OLD_NET_CONF_FILE} ${NEW_NET_CONF_FILE} \
-	${OLD_NET_HTTP_CONF_FILE} ${NEW_NET_HTTP_CONF_FILE} \
-	${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
+rm -f ${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
 	${OLD_REQLIMIT_CONF_FILE} ${NEW_REQLIMIT_CONF_FILE} \
 	${OLD_LOCALNET_CONF_FILE} ${NEW_LOCALNET_CONF_FILE} \
 	${OLD_NETWORKS_CONF_FILE} ${NEW_NETWORKS_CONF_FILE} 

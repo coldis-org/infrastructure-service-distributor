@@ -35,6 +35,7 @@ fi
 # Variables.
 ENV_VARIABLES=$(awk 'BEGIN{for(v in ENVIRON) print "$"v}')
 
+# Replaces variables in files.
 if [ -z "${FILES}" ]
 then
 FILES="\

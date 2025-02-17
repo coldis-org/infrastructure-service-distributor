@@ -198,3 +198,8 @@
 #           ctl:ruleRemoveById=920280,\
 #           ctl:ruleRemoveById=920350,\
 #           ctl:ruleRemoveByTag=attack-disclosure"
+
+
+
+# Automated exclusions. Any rules after this line will be replaced.
+

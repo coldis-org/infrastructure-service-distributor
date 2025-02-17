@@ -1,5 +1,8 @@
 #!/bin/sh -e
 
+# Starts syslog.
+rsyslogd &
+RSYSLOG_PID=$!
 
 # Starts cron.
 env > /etc/docker_env
@@ -23,3 +26,6 @@ nginx_check_config --no-reload || true
 
 # Runs original command.
 exec "$@"
+
+# Stops syslog.
+kill -s SIGTERM $RSYSLOG_PID

@@ -150,6 +150,13 @@ RUN apt-get update -y \
 COPY cron /etc/cron.d
 RUN chmod -R 0644 /etc/cron.d/
 
+# Installs syslog and copies configuration.
+RUN apt-get update -y \
+    && apt-get install -y rsyslog \
+    && apt-get clean -y \
+    && rm -rf /var/lib/apt-get/lists/*
+COPY config/rsyslog.conf /etc/rsyslog.conf	
+
 # Copies the scripts.
 RUN mkdir -p /opt/nginx-script
 COPY script /opt/nginx-script
@@ -178,8 +185,8 @@ ENV	CERTBOT_PORT=80\
 	CERT_UPDATE_SCHEDULE="0 0 * * *"\
 	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\
 	ACCESSLOG=/dev/null\
-	ERRORLOG=/dev/stderr\
 	METRICSLOG=/dev/stdout\
+	ERRORLOG="syslog:server=unix:/dev/log,facility=local7,tag=nginx"\
 	LOG_BUFFER=3m\
 	LOG_FLUSH=5s\
 	LOG_LEVEL=warn\

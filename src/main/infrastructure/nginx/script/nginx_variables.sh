@@ -39,6 +39,7 @@ ENV_VARIABLES=$(awk 'BEGIN{for(v in ENVIRON) print "$"v}')
 if [ -z "${FILES}" ]
 then
 FILES="\
+/etc/rsyslog.conf \
 $(ls /etc/modsecurity.d/ | sed "s#^#/etc/modsecurity.d/#") \
 $(ls /etc/nginx/ | sed "s#^#/etc/nginx/#") \
 $(ls /etc/nginx/conf.d | sed "s#^#/etc/nginx/conf.d/#") \

@@ -186,9 +186,9 @@ ENV	CERTBOT_PORT=80\
 	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\
 	ACCESSLOG=/dev/null\
 	METRICSLOG=/dev/stdout\
-	ERRORLOG="syslog:server=unix:/dev/log,facility=local7,tag=nginx"\
-	LOG_BUFFER=3m\
-	LOG_FLUSH=5s\
+	ERRORLOG=syslog:server=unix:/dev/log,facility=local7,tag=nginx\
+	LOG_BUFFER_MB=5\
+	LOG_FLUSH_MILLIS=10000\
 	LOG_LEVEL=warn\
 	DNS_SERVER=\
 	CONNECTION_TIMEOUT=15s\

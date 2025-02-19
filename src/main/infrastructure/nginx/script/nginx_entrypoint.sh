@@ -7,7 +7,8 @@ RSYSLOG_PID=$!
 # Starts cron.
 env > /etc/docker_env
 chmod +x /etc/docker_env
-envsubst < /etc/cron.d/nginx_jobs > /etc/cron.d/nginx_jobs
+NGINX_JOBS_FILE=/etc/cron.d/nginx_jobs
+envsubst < "${NGINX_JOBS_FILE}" | sponge "${NGINX_JOBS_FILE}"
 crontab /etc/cron.d/nginx_jobs
 service cron start
 

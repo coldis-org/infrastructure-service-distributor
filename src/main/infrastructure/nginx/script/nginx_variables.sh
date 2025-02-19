@@ -54,6 +54,6 @@ fi
 # Replaces variables in files.
 for FILE in $FILES; do
 	if [ -f "$FILE" ]; then
-		envsubst "$ENV_VARIABLES" <"$FILE" | sponge "$FILE"
+		envsubst "$ENV_VARIABLES" < "$FILE" | sponge "$FILE"
 	fi
 done

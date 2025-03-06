@@ -2,6 +2,9 @@
 ARG NGINX_VERSION=1.27.4
 ARG BUILD_PROC=16 
 
+# From Debian.
+FROM coldis/infrastructure-os:1.0.0 as debian
+
 # Build.
 FROM nginx:${NGINX_VERSION} as build
 
@@ -158,6 +161,8 @@ RUN apt-get update -y \
 COPY config/rsyslog.conf /etc/rsyslog.conf	
 
 # Copies the scripts.
+COPY --from=debian /opt/os-script /opt/os-script
+COPY --from=debian /usr/bin/os* /usr/bin
 RUN mkdir -p /opt/nginx-script
 COPY script /opt/nginx-script
 RUN chmod -R 755 /opt/nginx-script \

@@ -37,7 +37,7 @@ while :; do
 done
 
 # Print if debug mode
-${DEBUG} && echo "Running 'nginx_remove_temporary_service_vhost'"
+${DEBUG} && echo "Running 'nginx_remove_temporary_service_vhost'."
 ${DEBUG} && echo "TEMP_PREFIX = $TEMP_PREFIX"
 
 # Using unavaialble variables should fail the script.
@@ -47,5 +47,5 @@ set -o nounset
 trap - INT TERM
 
 # Removing temporary vhosts.
-${DEBUG} && echo "Removing temporary vhosts "
+${DEBUG} && echo "Removing temporary vhosts."
 rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

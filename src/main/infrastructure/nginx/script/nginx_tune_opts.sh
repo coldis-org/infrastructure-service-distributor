@@ -1,17 +1,5 @@
 #!/bin/sh
 
-# Memory limit.
-memory_limit() {
-	default_mem=$(( 1024 * 1024 * 1024 )) # 1GB
-	max_mem=9223372036854771712
-	mem=$( cat "/sys/fs/cgroup/memory/memory.limit_in_bytes" 2>/dev/null )
-	if [ -z "${mem}" ] || [ "${mem}" = "${max_mem}" ]
-	then
-		mem="${default_mem}"
-	fi
-	echo "${mem}"
-}
-echo "memory_limit=$(memory_limit)"
 
 # Gets Nginx tund opts.
 nginx_tune_opts() {
@@ -30,33 +18,27 @@ nginx_tune_opts() {
 #	THREAD_QUEUE=
 #	THREAD_QUEUE_MEM_PERC=3000
 
+	# OS limits.
+	. os_limits
+	available_cpus
+	available_memory
 	
 	# CPU.
-	CPU_UNIT=100000
 	if [ -z "${MAX_CPU}" ]
 	then
-		MAX_CPU=$(cat "/sys/fs/cgroup/cpu/cpu.cfs_quota_us" 2>/dev/null || echo "error")
-	fi
-	if [ -z "${MAX_CPU}" ] || [ "${MAX_CPU}" = "error" ] || [ ${MAX_CPU} -le 0 ]
-	then
-		MAX_CPU=$((1 * CPU_UNIT))
+		MAX_CPU="${AVAILABLE_CPUS}"
 	fi
 	
 	# Max memory.
 	if [ -z "${MAX_MEMORY}" ]
 	then
-		MAX_MEMORY=$( memory_limit || echo "error" )
+		MAX_MEMORY="${AVAILABLE_MEMORY}"
 	fi
-	if [ -z "${MAX_MEMORY}" ] || [ "${MAX_MEMORY}" = "error" ] || [ ${MAX_MEMORY} -le 0 ]
-	then
-		MAX_MEMORY=$(( 1024 * 1024 * 1024 )) # Default to 1G.
-	fi
-	MAX_MEMORY=$((MAX_MEMORY / 1024 / 1024)) # MB
-
 	
+	# Processes.
 	if [ -z "${PROCESSES}" ] && [ ! -z "${PROCESSES_PROC_PERC}" ]
 	then
-		PROCESSES=$(( PROCESSES_PROC_PERC * MAX_CPU / CPU_UNIT / 100 ))
+		PROCESSES=$(( PROCESSES_PROC_PERC * MAX_CPU / 100 ))
 	fi
 	if [ -z "${PROCESSES}" ]
     then
@@ -65,30 +47,29 @@ nginx_tune_opts() {
 		PROCESSES=$(( PROCESSES < 1 ? 1 : PROCESSES ))
     fi
 
+	# Threads.
 	if [ -z "${THREADS}" ]
 	then
-		THREADS=$(( THREADS_PROC_PERC * MAX_CPU / CPU_UNIT / 100 ))
+		THREADS=$(( THREADS_PROC_PERC * MAX_CPU / 100 ))
 	fi
 	THREADS=$((THREADS > MAX_THREADS ? MAX_THREADS : THREADS))
 	THREADS=$((THREADS < 1 ? 1 : THREADS))
+	if [ -z "${THREAD_QUEUE}" ]
+	then
+		THREAD_QUEUE=$(( THREAD_QUEUE_MEM_PERC * MAX_MEMORY / 100 ))
+	fi
 	
+	# Connections.
 	if [ -z "${CONNECTIONS}" ]
 	then
 		CONNECTIONS=$(( CONNECTIONS_MEM_PERC * MAX_MEMORY / 100 ))
 	fi
-	
 	if [ -z "${KEEPALIVE_REQUESTS}" ]
 	then
 		KEEPALIVE_REQUESTS=$(( KEEPALIVE_REQUESTS_MEM_PERC * MAX_MEMORY / 100 ))
 	fi
 	KEEPALIVE_REQUESTS=$(( KEEPALIVE_REQUESTS > MAX_KEEPALIVE_REQUESTS ? MAX_KEEPALIVE_REQUESTS : KEEPALIVE_REQUESTS ))
 
-	
-	if [ -z "${THREAD_QUEUE}" ]
-	then
-		THREAD_QUEUE=$(( THREAD_QUEUE_MEM_PERC * MAX_MEMORY / 100 ))
-	fi
-	
 	echo "MAX_MEMORY=${MAX_MEMORY}"
 	echo "MAX_CPU=${MAX_CPU}"
 	echo "PROCESSES=${PROCESSES}"

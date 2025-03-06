@@ -6,7 +6,8 @@
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
-ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf.err
+conf_folder=/etc/nginx/
+error_files_name_pattern=*.conf.err
 
 # For each argument.
 while :; do
@@ -20,7 +21,7 @@ while :; do
 			
 		# Error files pattern.
 		--pattern)
-			ERROR_FILES_NAME_PATTERN=${2}
+			error_files_name_pattern=${2}
 			shift
 			;;
 			
@@ -39,7 +40,8 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'nginx_revert_config_errors'"
 
 # Error files.
-for ERROR_FILE in ${ERROR_FILES_NAME_PATTERN}
+ERROR_FILES=$( find ${conf_folder} -type f -name "${error_files_name_pattern}" )
+for ERROR_FILE in ${ERROR_FILES}
 do
 	
 	if [ -f "${ERROR_FILE}" ]

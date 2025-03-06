@@ -79,11 +79,11 @@ then
 	mkdir -p ${CERT_FOLDER}
 	if ( ! ${ONLY_IF_MISSING} ) || ( [ ! -f ${CERT_FOLDER}/key.pem ] || [ ! -f ${CERT_FOLDER}/cert.pem ] )
 	then
-		CERT_CONF=$(echo "/tmp/${DOMAIN}-cert.conf" | sed -e "s/\*/_/g")
-		cat /etc/ssl/openssl.cnf > ${CERT_CONF}
-		echo "[SAN]\nsubjectAltName=DNS:${DOMAIN}" >> ${CERT_CONF}
-		openssl req -newkey rsa:4096 -new -x509 -sha256 -reqexts SAN -extensions SAN -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}" -config ${CERT_CONF}
-		rm ${CERT_CONF}
+		TEMP_CERT_CONF_FILE=$(echo "/tmp/${DOMAIN}-cert.conf" | sed -e "s/\*/_/g")
+		cat /etc/ssl/openssl.cnf > ${TEMP_CERT_CONF_FILE}
+		echo "[SAN]\nsubjectAltName=DNS:${DOMAIN}" >> ${TEMP_CERT_CONF_FILE}
+		openssl req -newkey rsa:4096 -new -x509 -sha256 -reqexts SAN -extensions SAN -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}" -config ${TEMP_CERT_CONF_FILE}
+		rm ${TEMP_CERT_CONF_FILE}
 	fi
 	
 # Otherwise, use certbot.

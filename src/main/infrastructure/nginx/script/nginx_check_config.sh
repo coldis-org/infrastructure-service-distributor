@@ -4,12 +4,13 @@
 #set -o pipefail
 
 # Default parameters.
-DEBUG=${DEBUG:=false}
-DEBUG_OPT=
-SKIP_RELOAD=false
-SKIP_RELOAD_PARAM=""
-RELOAD_ONLY_IF_ERRORS_CHANGE=false
-NO_ERROR_FILES_NAME_PATTERN=/etc/nginx/*/*.conf
+debug=${DEBUG:=false}
+debug_opt=
+skip_reload=false
+skip_reload_param=""
+reload_only_if_errors_change=false
+conf_folder=/etc/nginx/
+no_error_files_name_pattern=*.conf
 
 # For each argument.
 while :; do
@@ -17,19 +18,19 @@ while :; do
 		
 		# Debug argument.
 		--debug)
-			DEBUG=true
-			DEBUG_OPT="--debug"
+			debug=true
+			debug_opt="--debug"
 			;;
 			
 		# If actual reload should be done only if errors change.
 		--only-if-errors-change)
-			RELOAD_ONLY_IF_ERRORS_CHANGE=true
+			reload_only_if_errors_change=true
 			;;
 			
 		# If actual reload should be done.
 		--no-reload)
-			SKIP_RELOAD=true
-			SKIP_RELOAD_PARAM="--no-reload"
+			skip_reload=true
+			skip_reload_param="--no-reload"
 			;;
 			
 		# No more options.
@@ -44,94 +45,109 @@ done
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_check_config'"
+${debug} && echo "Running 'nginx_check_config'"
 
 # Error files.
-INITIAL_NO_ERROR_FILES=$(ls ${NO_ERROR_FILES_NAME_PATTERN} || true)
-nginx_revert_config_errors ${DEBUG_OPT}
+initial_no_error_files=$( find ${conf_folder} -type f -name "${no_error_files_name_pattern}" )
+nginx_revert_config_errors ${debug_opt}
 
 # Test files with errors.
-${DEBUG} && nginx -t || true
-NGINX_TEST="$( nginx -t 2>&1 )"
-${DEBUG} && echo "NGINX_TEST=${NGINX_TEST}"
-NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
-CONFIG_VALID=true
-LAST_NGINX_ERROR_FILE=
-CERT_ERROR=
-while [ ! -z "${NGINX_ERROR}" ]
+${debug} && nginx -t || true
+nginx_test=$( nginx -t 2>&1 1>/dev/null )
+${debug} && echo "nginx_test=${nginx_test}"
+error_pattern="[emerg]"
+nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
+config_valid=true
+last_nginx_file_with_error=
+cert_with_error=
+conf_file_format="/etc/nginx/[^ ]*/[^ ]*.conf"
+while [ ! -z "${nginx_error}" ]
 do
-	CONFIG_VALID=false
-	echo "NGINX_ERROR=${NGINX_ERROR}"
-	# Removes files with errors.
-	NGINX_ERROR_FILE=$(echo ${NGINX_ERROR} | sed -e "s/.*\[emerg\]//g" -e "s/[^\/]* \//\//" -e "s/[: ].*//g")
-    # Check if is not a certificate error
-    if [ -z "${NGINX_ERROR_FILE}" ]
+	config_valid=false
+	
+	# Tries to get the file with error.
+	nginx_file_with_error=$( echo ${nginx_error} | grep "${conf_file_format}" | sed -e "s#.*\(${conf_file_format}\).*#\1#" )
+	
+    # Gets the file with certificate error.
+    if [ -z "${nginx_file_with_error}" ]
     then
-        CERT_ERROR=$(echo ${NGINX_ERROR} | grep "cannot load certificate" | sed -e "s#.*/etc/letsencrypt/live/##g" -e "s#/fullchain.pem.*##g" )
-        NGINX_ERROR_FILE=$(grep -m 1 ${CERT_ERROR} /etc/nginx/vhost.d/* | cut -d: -f1 | grep https)
-		echo "Certificate $CERT_ERROR not found"
+        cert_with_error=$( echo ${nginx_error} | grep "cannot load certificate" | sed -e "s#.*cannot load certificate\( key\)\? \"##" -e "s#\.pem.*#\.pem#" )
+		if [ ! -z "${cert_with_error}" ]
+		then
+	        nginx_file_with_error=$( grep -R -m 1 "${cert_with_error}" "${conf_folder}" 2>/dev/null | cut -d: -f1 )
+			echo "Certificate ${cert_with_error} not found"
+		fi
     fi
+    
 	# If it is the main file, breaks.
-	if [ "${NGINX_ERROR_FILE}" = "/etc/nginx/nginx.conf" ] || [ "${LAST_NGINX_ERROR_FILE}" = "${NGINX_ERROR_FILE}" ]
+	if [ "${nginx_file_with_error}" = "" ] 
 	then
-		echo "Main file with error. Nothing to do."
+	    echo "No file with error. Stops trying to fix."
+        break
+	elif [ "${nginx_file_with_error}" = "${last_nginx_file_with_error}" ]
+	then
+		echo "Error loop. Stops trying to fix."
 		break
 	fi
-	LAST_NGINX_ERROR_FILE=${NGINX_ERROR_FILE}
-	echo "Moving file ${NGINX_ERROR_FILE} to ${NGINX_ERROR_FILE}.err"
-	rm -f ${NGINX_ERROR_FILE}.err
-	mv ${NGINX_ERROR_FILE} ${NGINX_ERROR_FILE}.err
-	NGINX_TEST="$( nginx -t 2>&1 | cat )"
-	${DEBUG} && echo "${NGINX_TEST}"
-	NGINX_ERROR="$( echo ${NGINX_TEST} | grep emerg )"
-	${DEBUG} && echo ${NGINX_ERROR}
+	
+	# Moves the file with error.
+	last_nginx_file_with_error=${nginx_file_with_error}
+	echo "Error in file. Moving file ${nginx_file_with_error} to ${nginx_file_with_error}.err"
+	mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err
+	
+	# Gets the next error.
+	nginx_test=$( nginx -t 2>&1 1>/dev/null )
+	${debug} && echo "${nginx_test}"
+	nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
+	${debug} && echo ${nginx_error}
+	
 done
-FINAL_NO_ERROR_FILES=$(ls ${NO_ERROR_FILES_NAME_PATTERN} || true)
+final_no_error_files=$( find ${conf_folder} -type f -name "${no_error_files_name_pattern}" )
 
 # Checks if there are new configuration files withou errors.
-SHOULD_CONTAIN_LIST=${INITIAL_NO_ERROR_FILES}
-TO_BE_CONTAINED_LIST=${FINAL_NO_ERROR_FILES}
-NEW_FILES_WITHOUT_ERRORS=false
-for TO_BE_CONTAINED_ITEM in ${TO_BE_CONTAINED_LIST}
+should_contain_list=${initial_no_error_files}
+to_be_contained_list=${final_no_error_files}
+new_files_without_errors=false
+for to_be_contained_item in ${to_be_contained_list}
 do
-	if ! echo ${SHOULD_CONTAIN_LIST} | grep -q ${TO_BE_CONTAINED_ITEM}
+	if ! echo ${should_contain_list} | grep -q ${to_be_contained_item}
     then
-    	echo "New file without errors: ${TO_BE_CONTAINED_ITEM}"
-        NEW_FILES_WITHOUT_ERRORS=true
+    	echo "New file without errors: ${to_be_contained_item}"
+        new_files_without_errors=true
         break
     fi
 done
-${DEBUG} && echo "NEW_FILES_WITHOUT_ERRORS=${NEW_FILES_WITHOUT_ERRORS}"
+${debug} && echo "new_files_without_errors=${new_files_without_errors}"
 
 # Reloads configuration.
-SHOULD_RELOAD=false
-if ${SKIP_RELOAD}
+should_reload=false
+if ${skip_reload}
 then
     echo "No reloading defined."
 else
-    if ${RELOAD_ONLY_IF_ERRORS_CHANGE}
+    if ${reload_only_if_errors_change}
     then
-    	if ${NEW_FILES_WITHOUT_ERRORS}
+    	if ${new_files_without_errors}
     	then
     		echo "New configuration files without errors."
-    		SHOULD_RELOAD=true
+    		should_reload=true
     	else
     	    echo "No new configuration files without errors. Skipping reload."
-    		SHOULD_RELOAD=false
+    		should_reload=false
     	fi
     else
-    	SHOULD_RELOAD=true
+    	should_reload=true
     fi
 fi
-if ${SHOULD_RELOAD}
+if ${should_reload}
 then
 	echo "Reloading configuration."
-	${SKIP_RELOAD} || nginx_variables ${SKIP_RELOAD_PARAM}
-	${SKIP_RELOAD} || nginx -s reload
+	${skip_reload} || nginx_variables ${skip_reload_param}
+	${skip_reload} || nginx -s reload
 fi
 
 # Returns if the configuration is valid.
-if ${CONFIG_VALID}
+if ${config_valid}
 then
 	return 0
 else 

@@ -43,72 +43,76 @@ while :; do
 	shift
 done
 
-# Using unavaialble variables should fail the script.
-set -o nounset
+if ${SKIP_ROUTINES}; then
 
-# Enables interruption signal handling.
-trap - INT TERM
+	# Using unavaialble variables should fail the script.
+	set -o nounset
 
-# Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_sync_config'"
-${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
-${DEBUG} && echo "hostname=$(hostname)"
+	# Enables interruption signal handling.
+	trap - INT TERM
 
-# If host config should be syncd.
-SYNC_DIFF=false
-if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
-then
+	# Print arguments if on debug mode.
+	${DEBUG} && echo "Running 'nginx_sync_config'"
+	${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
+	${DEBUG} && echo "hostname=$(hostname)"
 
-	${DEBUG} && echo "Synching config"
-	# Prepares folders.
-	rm -rf ${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
-			${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
-	mkdir -p ${VHOSTS} ${CERTS} ${STREAM} \
-			${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
-			${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
-	cp -rf ${VHOSTS}/* ${OLD_VHOSTS_TMP}
-	cp -rf ${STREAM}/* ${OLD_STREAM_TMP}
-	
-	# Downloads the configuration.
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
-	# Exit if config distributor is down.
-	if [ $? -ne 0 ]; then
-		${DEBUG} && echo "Failed to download folder"
-		exit 0
-	fi
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
-
-    # If there are differences, sync them.
-    nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"
-	if ! diff -r ${CERTS} ${NEW_CERTS_TMP}
+	# If host config should be syncd.
+	SYNC_DIFF=false
+	if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 	then
-		rm -rf ${CERTS}/*
-		mv ${NEW_CERTS_TMP}/* ${CERTS}/
-		SYNC_DIFF=true
-	fi
-	if ! diff -r ${OLD_VHOSTS_TMP} ${NEW_VHOSTS_TMP}
-	then
-		rm -rf ${VHOSTS}/*
-		mv ${NEW_VHOSTS_TMP}/* ${VHOSTS}/
-		SYNC_DIFF=true
-	fi
-	if ! diff -r ${OLD_STREAM_TMP} ${NEW_STREAM_TMP}
-	then
-		rm -rf ${STREAM}/*
-		mv ${NEW_STREAM_TMP}/* ${STREAM}/
-		SYNC_DIFF=true
+
+		${DEBUG} && echo "Synching config"
+		# Prepares folders.
+		rm -rf ${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
+				${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
+		mkdir -p ${VHOSTS} ${CERTS} ${STREAM} \
+				${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
+				${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
+		cp -rf ${VHOSTS}/* ${OLD_VHOSTS_TMP}
+		cp -rf ${STREAM}/* ${OLD_STREAM_TMP}
+		
+		# Downloads the configuration.
+		wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
+		# Exit if config distributor is down.
+		if [ $? -ne 0 ]; then
+			${DEBUG} && echo "Failed to download folder"
+			exit 0
+		fi
+		wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
+		wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
+
+		# If there are differences, sync them.
+		nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"
+		if ! diff -r ${CERTS} ${NEW_CERTS_TMP}
+		then
+			rm -rf ${CERTS}/*
+			mv ${NEW_CERTS_TMP}/* ${CERTS}/
+			SYNC_DIFF=true
+		fi
+		if ! diff -r ${OLD_VHOSTS_TMP} ${NEW_VHOSTS_TMP}
+		then
+			rm -rf ${VHOSTS}/*
+			mv ${NEW_VHOSTS_TMP}/* ${VHOSTS}/
+			SYNC_DIFF=true
+		fi
+		if ! diff -r ${OLD_STREAM_TMP} ${NEW_STREAM_TMP}
+		then
+			rm -rf ${STREAM}/*
+			mv ${NEW_STREAM_TMP}/* ${STREAM}/
+			SYNC_DIFF=true
+		fi
+
 	fi
 
+	# Returns if the configuration was updated.
+	if ${SYNC_DIFF}
+	then
+		echo "Changes detected when synching config. Should reload configuration."
+		return 0
+	else 
+		echo "No changes detected when synching config. Should not reload configuration."
+		return 1
+	fi
+else
+	${DEBUG} && echo "Skipping 'nginx_sync_config' due conditional"
 fi
-
-# Returns if the configuration was updated.
-if ${SYNC_DIFF}
-then
-	echo "Changes detected when synching config. Should reload configuration."
-    return 0
-else 
-	echo "No changes detected when synching config. Should not reload configuration."
-    return 1
-fi
-

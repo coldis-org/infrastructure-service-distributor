@@ -19,7 +19,8 @@ RUN chmod -R 755 /opt/nginx-script && \
 	done
 
 # Variables.
-ENV METRICSLOG=/dev/null
+ENV METRICSLOG=/dev/null\
+	SKIP_ROUTINES=true
 
 # Entrypoint.
 ENTRYPOINT ["nginx_config_entrypoint"]

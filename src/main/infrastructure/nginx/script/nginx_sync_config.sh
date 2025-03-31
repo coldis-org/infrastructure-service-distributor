@@ -43,7 +43,7 @@ while :; do
 	shift
 done
 
-if ${SKIP_ROUTINES}; then
+if ! ${SKIP_ROUTINES}; then
 
 	# Using unavaialble variables should fail the script.
 	set -o nounset

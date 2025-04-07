@@ -19,6 +19,7 @@ NEW_CONFIG_TMP=${CONFIG_TMP}/new/${CONF_HOST_NAME}
 NEW_VHOSTS_TMP=${NEW_CONFIG_TMP}/vhost
 NEW_CERTS_TMP=${NEW_CONFIG_TMP}/cert
 NEW_STREAM_TMP=${NEW_CONFIG_TMP}/stream
+ENV_FILE="/local/application.env"
 
 # For each argument.
 while :; do
@@ -54,6 +55,11 @@ ${DEBUG} && echo "Running 'nginx_sync_config'"
 ${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
 ${DEBUG} && echo "hostname=$(hostname)"
 
+# Update environment variables
+if [ -f "$ENV_FILE" ]; then
+  . "$ENV_FILE"
+fi
+
 # If host config should be syncd.
 SYNC_DIFF=false
 if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
@@ -70,14 +76,14 @@ then
 	cp -rf ${STREAM}/* ${OLD_STREAM_TMP}
 	
 	# Downloads the configuration.
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
 	# Exit if config distributor is down.
 	if [ $? -ne 0 ]; then
 		${DEBUG} && echo "Failed to download folder"
 		exit 0
 	fi
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
 
     # If there are differences, sync them.
     nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"

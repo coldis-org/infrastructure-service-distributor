@@ -38,8 +38,8 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Update web-config address on runtime
-${DEBUG} && echo "Running sed -i \"s/Host.*/Host ${CONF_HOST_NAME};/\" ${CERTBOT_FILE}"
-sed -i "s/Host.*/Host ${CONF_HOST_NAME};/" ${CERTBOT_FILE}
+${DEBUG} && echo "Running sed -i \"s|http://.*|http://${CONF_HOST_NAME};|\" $CERTBOT_FILE"
+sed -i "s|http://.*|http://${CONF_HOST_NAME};|" $CERTBOT_FILE
 
 ${DEBUG} && echo "Running nginx_check_config"
 nginx_check_config

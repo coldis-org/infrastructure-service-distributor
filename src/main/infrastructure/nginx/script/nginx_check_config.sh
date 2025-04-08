@@ -66,7 +66,7 @@ do
 	config_valid=false
 	
 	# Get only emerg output
-	nginx_error=$( echo ${nginx_error} | sed 's/.*\[emerg\] //')
+	nginx_error=$( echo ${nginx_error} | sed "s/.*${error_pattern}//")
 
 	# Tries to get the file with error.
 	nginx_file_with_error=$( echo ${nginx_error} | grep "${conf_file_format}" | sed -e "s#.*\(${conf_file_format}\).*#\1#" )

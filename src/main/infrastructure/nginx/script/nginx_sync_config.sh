@@ -3,6 +3,12 @@
 # Default script behavior.
 #set -o pipefail
 
+# Update environment variables
+ENV_FILE="/local/application.env"
+if [ -f "$ENV_FILE" ]; then
+  . "$ENV_FILE"
+fi
+
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
@@ -19,7 +25,6 @@ NEW_CONFIG_TMP=${CONFIG_TMP}/new/${CONF_HOST_NAME}
 NEW_VHOSTS_TMP=${NEW_CONFIG_TMP}/vhost
 NEW_CERTS_TMP=${NEW_CONFIG_TMP}/cert
 NEW_STREAM_TMP=${NEW_CONFIG_TMP}/stream
-ENV_FILE="/local/application.env"
 
 # For each argument.
 while :; do
@@ -54,11 +59,6 @@ trap - INT TERM
 ${DEBUG} && echo "Running 'nginx_sync_config'"
 ${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
 ${DEBUG} && echo "hostname=$(hostname)"
-
-# Update environment variables
-if [ -f "$ENV_FILE" ]; then
-  . "$ENV_FILE"
-fi
 
 # If host config should be syncd.
 SYNC_DIFF=false

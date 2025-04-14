@@ -188,7 +188,7 @@ ENV	CERTBOT_PORT=80\
 	CERT_SELF_CNS=client\
 	CERT_SELF_OWN_CN=*.supersim.com.br\
 	CERT_UPDATE_SCHEDULE="0 0 * * *"\
-	CONFIG_UPDATE_SCHEDULE="*/2 * * * *"\
+	CONFIG_UPDATE_SCHEDULE="* * * * *"\
 	ACCESSLOG=/dev/null\
 	METRICSLOG=/dev/stdout\
 	ERRORLOG=syslog:server=unix:/dev/log,facility=local7,tag=nginx\

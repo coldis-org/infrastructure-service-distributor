@@ -55,7 +55,7 @@ nginx_revert_config_errors ${debug_opt}
 ${debug} && nginx -t || true
 nginx_test=$( nginx -t 2>&1 1>/dev/null )
 ${debug} && echo "nginx_test=${nginx_test}"
-error_pattern="[emerg]"
+error_pattern="\[emerg\]"
 nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
 config_valid=true
 last_nginx_file_with_error=
@@ -65,6 +65,9 @@ while [ ! -z "${nginx_error}" ]
 do
 	config_valid=false
 	
+	# Get only emerg output
+	nginx_error=$( echo ${nginx_error} | sed "s/.*${error_pattern}//")
+
 	# Tries to get the file with error.
 	nginx_file_with_error=$( echo ${nginx_error} | grep "${conf_file_format}" | sed -e "s#.*\(${conf_file_format}\).*#\1#" )
 	

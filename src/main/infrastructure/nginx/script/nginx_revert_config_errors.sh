@@ -7,24 +7,21 @@
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 conf_folder=/etc/nginx/
-error_files_name_pattern=*.conf.err
+error_files_name_pattern=*.conf*.err
 
 # For each argument.
 while :; do
 	case ${1} in
-		
 		# Debug argument.
 		--debug)
 			DEBUG=true
 			DEBUG_OPT="--debug"
 			;;
-			
 		# Error files pattern.
 		--pattern)
 			error_files_name_pattern=${2}
 			shift
 			;;
-			
 		# No more options.
 		*)
 			break
@@ -43,11 +40,10 @@ ${DEBUG} && echo "Running 'nginx_revert_config_errors'"
 ERROR_FILES=$( find ${conf_folder} -type f -name "${error_files_name_pattern}" )
 for ERROR_FILE in ${ERROR_FILES}
 do
-	
 	if [ -f "${ERROR_FILE}" ]
 	then
 		# If the original file exists, removes the error file.
-		ORIGINAL_FILE=$(echo "${ERROR_FILE}" | sed "s/.err$//")
+		ORIGINAL_FILE=$(echo "${ERROR_FILE}" | sed "s/.err$//g")
 		if [ -f "${ORIGINAL_FILE}" ]
 		then
 			rm ${ERROR_FILE}
@@ -58,4 +54,3 @@ do
 	fi
 
 done
-

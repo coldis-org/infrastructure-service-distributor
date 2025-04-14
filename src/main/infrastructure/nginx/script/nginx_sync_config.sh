@@ -3,6 +3,12 @@
 # Default script behavior.
 #set -o pipefail
 
+# Update environment variables
+ENV_FILE="/local/application.env"
+if [ -f "$ENV_FILE" ]; then
+  . "$ENV_FILE"
+fi
+
 # Default parameters.
 DEBUG=${DEBUG:=false}
 DEBUG_OPT=
@@ -70,14 +76,14 @@ then
 	cp -rf ${STREAM}/* ${OLD_STREAM_TMP}
 	
 	# Downloads the configuration.
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
 	# Exit if config distributor is down.
 	if [ $? -ne 0 ]; then
 		${DEBUG} && echo "Failed to download folder"
 		exit 0
 	fi
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
-	wget --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
+	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/stream/
 
     # If there are differences, sync them.
     nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"

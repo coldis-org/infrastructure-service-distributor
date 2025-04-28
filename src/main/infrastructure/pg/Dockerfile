@@ -39,7 +39,7 @@ RUN	set -x \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Installs LDAP integration and PostgreSQL Client
+# Installs LDAP integration and PostgreSQL Client.
 RUN	set -x \
 	&& apt-get -y update \
 	&& apt-get install -y libpam-ldap \

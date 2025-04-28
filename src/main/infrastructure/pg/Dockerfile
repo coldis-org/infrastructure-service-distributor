@@ -39,17 +39,13 @@ RUN	set -x \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Installs LDAP integration.
+# Installs LDAP integration and PostgreSQL Client
 RUN	set -x \
 	&& apt-get -y update \
 	&& apt-get install -y libpam-ldap \
+	&& apt-get install -y postgresql-client \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
-
-# Installs PostgreSQL Client
-RUN apt-get update && \
-    apt-get install -y postgresql-client && \
-    rm -rf /var/lib/apt/lists/*
 
 # Copies the scripts.
 RUN mkdir -p /opt/pgbouncer-script

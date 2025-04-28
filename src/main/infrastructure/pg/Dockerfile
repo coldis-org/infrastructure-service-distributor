@@ -10,7 +10,7 @@ RUN	set -x \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.23.0 \
+ENV PGBOUNCER_VERSION=1.24.1 \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \
@@ -39,10 +39,11 @@ RUN	set -x \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
 
-# Installs LDAP integration.
+# Installs LDAP integration and PostgreSQL Client.
 RUN	set -x \
 	&& apt-get -y update \
 	&& apt-get install -y libpam-ldap \
+	&& apt-get install -y postgresql-client \
 	&& apt-get purge -y --auto-remove \
 	&& rm -rf /var/lib/apt/lists/*
 

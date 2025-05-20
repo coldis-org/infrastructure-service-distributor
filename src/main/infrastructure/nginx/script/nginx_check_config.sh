@@ -11,6 +11,7 @@ skip_reload_param=""
 reload_only_if_errors_change=false
 conf_folder=/etc/nginx/
 no_error_files_name_pattern=*.conf
+upstream_folder=/etc/nginx/upstream.d
 
 # For each argument.
 while :; do
@@ -142,6 +143,20 @@ else
     	should_reload=true
     fi
 fi
+
+# If a dynamic upstream has changed reload config
+last_modify=$(stat --format '%y' ${upstream_folder}/upstream-vhost.conf)
+if [ -f ${upstream_folder}/.vhost_last_stat ]; then
+	if [ "${last_modify}" != "$(cat ${upstream_folder}/.vhost_last_stat)" ]; then
+		echo "nginx_check_config: [INFO] Update vhost_last_stat"
+		echo "${last_modify}" > ${upstream_folder}/.vhost_last_stat
+		should_reload=true
+	fi
+else
+	echo "nginx_check_config: [INFO] Populate vhost_last_stat"
+	echo "${last_modify}" > ${upstream_folder}/.vhost_last_stat
+fi
+
 if ${should_reload}
 then
 	echo "Reloading configuration."

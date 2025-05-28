@@ -228,7 +228,8 @@ ENV	CERTBOT_PORT=80\
 	DEFAULT_TRUSTED_REQLIMIT_RATIO=4000r/m\
 	MAX_REQLIMIT_RATIO=10000r/m\
 	INTERNAL_SYNC_CONF_HOST_NAME=web-config.intranet.supersim.com.br\
-	FALLBACK_PORT=6767
+	FALLBACK_PORT=6767\
+	NOCACHE_VALUE="no-store, no-cache"
 	
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

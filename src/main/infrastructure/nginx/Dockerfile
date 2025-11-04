@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.27.4
+ARG NGINX_VERSION=1.27.5
 ARG BUILD_PROC=16 
 
 # From Debian.
@@ -12,7 +12,7 @@ FROM nginx:${NGINX_VERSION} as build
 WORKDIR /sources
 
 # Mod security.
-ARG MODSEC_VERSION=3.0.13
+ARG MODSEC_VERSION=3.0.14
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		automake \

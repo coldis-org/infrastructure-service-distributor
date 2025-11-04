@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.27.5
+ARG NGINX_VERSION=1.29.3
 ARG BUILD_PROC=16 
 
 # From Debian.
@@ -23,7 +23,6 @@ RUN apt-get update \
 		libcurl4-gnutls-dev \
 		libfuzzy-dev \
 		liblua5.3-dev \
-		libpcre3-dev \
 		libpcre2-dev \
 		libtool \
 		libxml2-dev \
@@ -41,28 +40,29 @@ RUN apt-get update \
 	&& mv *modsecurity* modsecurity \
 	&& cd modsecurity \
 	&& ./build.sh \
-	&& ./configure \
-	&& make install 
+	&& ./configure --with-pcre2 \
+	&& make -j"${BUILD_PROC}" \
+	&& make install
 	
 # VTS.
-ARG VTS_VERSION=0.2.3
+ARG VTS_VERSION=0.2.4
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \
 	&& mv *nginx-module-vts* nginx-module-vts 
 
 # Modsec module.
-ARG MODSEC_NGINX_VERSION=1.0.3
+ARG MODSEC_NGINX_VERSION=1.0.4
 RUN wget --quiet https://github.com/SpiderLabs/ModSecurity-nginx/releases/download/v${MODSEC_NGINX_VERSION}/modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& tar -xvzf modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
 	&& rm modsecurity-nginx-v${MODSEC_NGINX_VERSION}.tar.gz \
-	&& mv *modsecurity-nginx* modsecurity-nginx \
+	&& mv *ModSecurity-nginx* modsecurity-nginx \
 	&& mkdir /etc/modsecurity.d \
 	&& wget --quiet https://raw.githubusercontent.com/SpiderLabs/ModSecurity/v3/master/unicode.mapping \
 	-O /etc/modsecurity.d/unicode.mapping
 
 # Devel kit module.
-ARG NDK_VERSION=v0.3.1
+ARG NDK_VERSION=v0.3.4
 RUN wget --quiet https://github.com/simpl/ngx_devel_kit/archive/refs/tags/${NDK_VERSION}.tar.gz \
     && tar -xvzf ${NDK_VERSION}.tar.gz \
     && rm ${NDK_VERSION}.tar.gz \

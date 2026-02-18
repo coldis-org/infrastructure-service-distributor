@@ -46,15 +46,12 @@ done
 ${DEBUG} && echo "Policies: ${AUTH_POLICIES}"
 ${DEBUG} && echo "Service: ${ACCESS_SERVICE}"
 
-printf '%s\n' "$AUTH_POLICIES" | tr ';' '\n' |
-while IFS=':' read -r route roles; do
-	CONF_FILE="$ACCESS_FILE_DIR/access-identity-management-$route.conf"
-  ${DEBUG} && echo "Creating file: ${CONF_FILE}"
+CONF_FILE="$ACCESS_FILE_DIR/access-identity-management.conf"
+${DEBUG} && echo "Creating file: ${CONF_FILE}"
 
-	if [ "$ENVIRONMENT" = "PROD" ] || [ "$ENVIRONMENT" = "PRODUCTION" ]; then
-		{
-			printf 'auth_request /oauth2/auth_%s;\n\n' "$route"
-			cat <<EOF
+if [ "$ENVIRONMENT" = "PROD" ] || [ "$ENVIRONMENT" = "PRODUCTION" ]; then
+	{
+		cat <<EOF
 auth_request_set \$user \$upstream_http_x_auth_request_preferred_username;
 auth_request_set \$email \$upstream_http_x_auth_request_email;
 auth_request_set \$groups \$upstream_http_x_auth_request_groups;
@@ -75,6 +72,10 @@ location /oauth2/ {
     proxy_set_header X-Auth-Request-Redirect \$scheme://\$host\$request_uri;
 }
 
+EOF
+		printf '%s\n' "$AUTH_POLICIES" | tr ';' '\n' |
+		while IFS=':' read -r route roles; do
+			cat <<EOF
 location = /oauth2/auth_$route {
     internal;
     auth_request off;
@@ -87,13 +88,14 @@ location = /oauth2/auth_$route {
     proxy_set_header Content-Length "";
     proxy_pass_request_body off;
 }
+
 EOF
-		} > "$CONF_FILE"
+		done
+	} > "$CONF_FILE"
 
-	else
-		: > "$CONF_FILE"
+else
+	: > "$CONF_FILE"
 
-	fi
+fi
 
-	${DEBUG} && echo "File access content: ${CONF_FILE}" && cat "${CONF_FILE}"
-done
+${DEBUG} && echo "File access content: ${CONF_FILE}" && cat "${CONF_FILE}"

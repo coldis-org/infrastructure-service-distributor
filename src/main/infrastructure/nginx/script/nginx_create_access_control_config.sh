@@ -94,7 +94,18 @@ EOF
 	} > "$CONF_FILE"
 
 else
-	: > "$CONF_FILE"
+    {
+        printf '%s\n' "$AUTH_POLICIES" | tr ';' '\n' |
+        while IFS=':' read -r route roles; do
+            cat <<EOF
+location = /oauth2/auth_$route {
+    internal;
+    return 200;
+}
+
+EOF
+        done
+    } > "$CONF_FILE"
 
 fi
 

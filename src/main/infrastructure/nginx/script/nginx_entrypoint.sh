@@ -16,6 +16,9 @@ service cron start
 . /usr/bin/nginx_tune_opts
 nginx_tune_opts
 
+# Create common config files
+nginx_create_access_control_config --auth-policies "${AUTH_POLICIES}" --environment "${ENVIRONMENT}" --access-service ${ACCESS_SERVICE} || true
+
 # Sync config.
 nginx_sync_config || true
 . nginx_install_all_basic_certs || true

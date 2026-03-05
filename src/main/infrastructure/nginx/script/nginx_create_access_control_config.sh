@@ -56,7 +56,7 @@ auth_request_set \$user \$upstream_http_x_auth_request_preferred_username;
 auth_request_set \$email \$upstream_http_x_auth_request_email;
 auth_request_set \$groups \$upstream_http_x_auth_request_groups;
 
-error_page 401 = /oauth2/sign_in;
+error_page 401 /oauth2/sign_in;
 
 proxy_set_header X-User \$user;
 proxy_set_header X-Email \$email;

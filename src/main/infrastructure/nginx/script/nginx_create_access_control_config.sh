@@ -75,12 +75,13 @@ location /oauth2/ {
 EOF
 		printf '%s\n' "$AUTH_POLICIES" | tr ';' '\n' |
 		while IFS=':' read -r route roles; do
+			formatted_roles=$(printf '%s' "$roles" | sed 's/^/role:/;s/,/,role:/g')
 			cat <<EOF
 location = /oauth2/auth_$route {
     internal;
     auth_request off;
 
-    proxy_pass http://$ACCESS_SERVICE/oauth2/auth?allowed_groups=role:$roles;
+    proxy_pass http://$ACCESS_SERVICE/oauth2/auth?allowed_groups=$formatted_roles;
 
     proxy_hide_header Host;
     proxy_set_header Host \$server_name;

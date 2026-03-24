@@ -150,7 +150,7 @@ do
 	fi
 
 	# Creates the reqlimit zone for the network.
-    REQLIMIT_RATE_VAR=$(echo "${NET}_REQLIMIT" | tr '[:lower:]' '[:upper:]')
+    REQLIMIT_RATE_VAR=$(echo "${NET}_REQLIMIT" | tr '[:lower:]-' '[:upper:]_')
 	eval "REQLIMIT_RATE=\${${REQLIMIT_RATE_VAR}:=}"
 	if [ -z "${REQLIMIT_RATE}" ]
     then
@@ -192,7 +192,7 @@ include ${NET_CONF_FILE};
 " > ${NEW_NET_HTTP_CONF_FILE}
     
     # Adds header validation if variables are available.
-    NET_HEADER_VAR=$(echo "${NET}_HEADER" | tr '[:lower:]' '[:upper:]')
+    NET_HEADER_VAR=$(echo "${NET}_HEADER" | tr '[:lower:]-' '[:upper:]_')
 	eval "NET_HEADER_PAIR=\${${NET_HEADER_VAR}}"
 	NET_HEADER_NAME=$(echo "${NET_HEADER_PAIR}" | sed -e "s/\([^=]*\).*/\1/")
 	NET_HEADER_VALUE=$(echo "${NET_HEADER_PAIR}" | sed -e "s/[^=]*[=$]*//")

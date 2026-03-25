@@ -12,6 +12,7 @@ reload_only_if_errors_change=false
 conf_folder=/etc/nginx/
 no_error_files_name_pattern=*.conf
 upstream_folder=/etc/nginx/upstream.d
+error_counts_file=/etc/nginx/.config_error_counts
 
 # For each argument.
 while :; do
@@ -98,6 +99,18 @@ do
 	last_nginx_file_with_error=${nginx_file_with_error}
 	echo "Error in file. Moving file ${nginx_file_with_error} to ${nginx_file_with_error}.err"
 	mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err
+
+	# Increments the error count for the file (only if MAX_CONFIG_ERROR_COUNT is set).
+	if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ]
+	then
+		touch ${error_counts_file}
+		current_count=$( grep "^${nginx_file_with_error} " ${error_counts_file} 2>/dev/null | awk '{print $NF}' | tr -dc '0-9' )
+		current_count=${current_count:-0}
+		new_count=$((current_count + 1))
+		sed -i "\#^${nginx_file_with_error} #d" ${error_counts_file}
+		echo "${nginx_file_with_error} ${new_count}" >> ${error_counts_file}
+		echo "Error count for ${nginx_file_with_error}: ${new_count}"
+	fi
 	
 	# Gets the next error.
 	nginx_test=$( nginx -t 2>&1 1>/dev/null )

@@ -8,6 +8,7 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 conf_folder=/etc/nginx/
 error_files_name_pattern=*.conf*.err
+error_counts_file=/etc/nginx/.config_error_counts
 
 # For each argument.
 while :; do
@@ -49,6 +50,19 @@ do
 			rm ${ERROR_FILE}
 		# If the original file does not exist, changes it back to the original name to test it.
 		else
+			# If MAX_CONFIG_ERROR_COUNT is set, check if the file has exceeded the max error count.
+			if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ] && [ -f "${error_counts_file}" ]
+			then
+				error_count=$( grep "^${ORIGINAL_FILE} " ${error_counts_file} 2>/dev/null | awk '{print $NF}' | tr -dc '0-9' )
+				error_count=${error_count:-0}
+				if [ "${error_count}" -ge "${MAX_CONFIG_ERROR_COUNT}" ]
+				then
+					echo "Removing ${ERROR_FILE} (error count: ${error_count}, max: ${MAX_CONFIG_ERROR_COUNT})"
+					rm -f ${ERROR_FILE}
+					sed -i "\#^${ORIGINAL_FILE} #d" ${error_counts_file}
+					continue
+				fi
+			fi
 			mv ${ERROR_FILE} ${ORIGINAL_FILE}
 		fi
 	fi

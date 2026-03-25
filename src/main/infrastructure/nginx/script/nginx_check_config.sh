@@ -121,6 +121,19 @@ do
 done
 final_no_error_files=$( find ${conf_folder} -type f -name "${no_error_files_name_pattern}" )
 
+# Resets error count for files that are now valid (only if MAX_CONFIG_ERROR_COUNT is set).
+if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ] && [ -f "${error_counts_file}" ]
+then
+	for valid_file in ${final_no_error_files}
+	do
+		if grep -q "^${valid_file} " ${error_counts_file} 2>/dev/null
+		then
+			${debug} && echo "Resetting error count for ${valid_file}"
+			sed -i "\#^${valid_file} #d" ${error_counts_file}
+		fi
+	done
+fi
+
 # Checks if there are new configuration files withou errors.
 should_contain_list=${initial_no_error_files}
 to_be_contained_list=${final_no_error_files}

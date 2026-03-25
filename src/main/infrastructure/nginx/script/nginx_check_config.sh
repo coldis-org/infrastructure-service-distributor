@@ -109,7 +109,7 @@ do
 		new_count=$((current_count + 1))
 		sed -i "\#^${nginx_file_with_error} #d" ${error_counts_file}
 		echo "${nginx_file_with_error} ${new_count}" >> ${error_counts_file}
-		echo "Error count for ${nginx_file_with_error}: ${new_count}"
+		${debug} && echo "Error count for ${nginx_file_with_error}: ${new_count}"
 	fi
 	
 	# Gets the next error.

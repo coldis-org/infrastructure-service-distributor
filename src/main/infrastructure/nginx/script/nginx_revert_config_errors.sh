@@ -57,7 +57,7 @@ do
 				error_count=${error_count:-0}
 				if [ "${error_count}" -ge "${MAX_CONFIG_ERROR_COUNT}" ]
 				then
-					echo "Removing ${ERROR_FILE} (error count: ${error_count}, max: ${MAX_CONFIG_ERROR_COUNT})"
+					${DEBUG} && echo "Removing ${ERROR_FILE} (error count: ${error_count}, max: ${MAX_CONFIG_ERROR_COUNT})"
 					rm -f ${ERROR_FILE}
 					sed -i "\#^${ORIGINAL_FILE} #d" ${error_counts_file}
 					continue

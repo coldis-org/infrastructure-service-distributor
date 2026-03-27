@@ -83,6 +83,20 @@ do
 			echo "Certificate ${cert_with_error} not found"
 		fi
     fi
+
+    # Gets the file with unknown variable error.
+    if [ -z "${nginx_file_with_error}" ]
+    then
+        unknown_var=$( echo ${nginx_error} | grep 'unknown "' | sed -e 's#.*unknown "##' -e 's#".*##' )
+        if [ ! -z "${unknown_var}" ]
+        then
+            nginx_file_with_error=$( grep -R -i -l -m 1 "\${${unknown_var}}" ${conf_folder}vhost.d/ ${conf_folder}conf.d/vhost.d/ 2>/dev/null | head -1 )
+            if [ ! -z "${nginx_file_with_error}" ]
+            then
+                echo "Unknown variable '${unknown_var}' found in file"
+            fi
+        fi
+    fi
     
 	# If it is the main file, breaks.
 	if [ "${nginx_file_with_error}" = "" ] 

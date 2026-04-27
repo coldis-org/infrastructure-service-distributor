@@ -3,7 +3,7 @@ ARG NGINX_VERSION=1.29.3
 ARG BUILD_PROC=16 
 
 # From Debian.
-FROM coldis/infrastructure-os:1.0.0 as debian
+FROM coldis/infrastructure-os:1.1.0 as debian
 
 # Build.
 FROM nginx:${NGINX_VERSION} as build

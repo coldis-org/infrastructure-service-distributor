@@ -80,7 +80,7 @@ fi
 ${DEBUG} && echo "nginx_test_vhosts: [DEBUG] Removing $( echo "${candidates}" | wc -w | tr -d ' ' ) candidate(s) before re-testing one by one"
 for candidate in ${candidates}
 do
-	mv -f "${candidate}" "${candidate}.err"
+	mv -f "${candidate}" "${candidate}.err" 2>/dev/null
 done
 
 # In audit mode (no fragment) the baseline with all candidates removed must be valid,
@@ -95,7 +95,7 @@ then
 		${DEBUG} && echo "nginx_test_vhosts: [DEBUG] ${baseline}"
 		for candidate in ${candidates}
 		do
-			mv -f "${candidate}.err" "${candidate}"
+			mv -f "${candidate}.err" "${candidate}" 2>/dev/null
 		done
 		return 1
 	fi
@@ -105,7 +105,7 @@ fi
 broken_count=0
 for candidate in ${candidates}
 do
-	mv -f "${candidate}.err" "${candidate}"
+	mv -f "${candidate}.err" "${candidate}" 2>/dev/null
 	test_output=$( nginx -t 2>&1 1>/dev/null )
 
 	# Determines whether this candidate is broken.
@@ -128,8 +128,8 @@ do
 	if ${is_broken}
 	then
 		broken_count=$(( broken_count + 1 ))
-		reason=$( echo "${test_output}" | sed "s/.*${error_pattern}//" | sed 's/ nginx: configuration file .* test failed//' )
-		echo "nginx_test_vhosts: [WARN] Broken file ${candidate}:${reason}"
+		reason=$( echo "${test_output}" | grep "${error_pattern}" | head -1 | sed -e "s/.*${error_pattern}//" -e 's/ nginx: configuration file .* test failed//' -e 's/^[[:space:]]*//' )
+		echo "nginx_test_vhosts: [WARN] Broken file ${candidate} — ${reason}"
 
 		if ${report_only}
 		then
@@ -137,7 +137,7 @@ do
 			:
 		else
 			# Quarantines the broken file.
-			mv -f "${candidate}" "${candidate}.err"
+			mv -f "${candidate}" "${candidate}.err" 2>/dev/null
 
 			# Increments the error count for the file (only if MAX_CONFIG_ERROR_COUNT is set).
 			if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ]

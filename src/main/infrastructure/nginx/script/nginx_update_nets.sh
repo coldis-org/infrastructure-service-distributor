@@ -46,6 +46,10 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo "nginx_update_nets: [DEBUG] Running"
 
+# Diff output (full file contents) is only useful for debugging; hide it otherwise.
+DIFF_OUT=/dev/null
+${DEBUG} && DIFF_OUT=/dev/stdout
+
 # Default parameters.
 CONFIG_UPDATED=false
 
@@ -255,8 +259,8 @@ if (\$${NET}_header_check = \"${NET}-not-checked\") {
 	done
 	
 	# Reloads the configuration if the file has been updated.
-	if  ( ! diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" ) || \
-        ( ! diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" )
+	if  ( ! diff "${OLD_NET_CONF_FILE}" "${NEW_NET_CONF_FILE}" >${DIFF_OUT} 2>&1 ) || \
+        ( ! diff "${OLD_NET_HTTP_CONF_FILE}" "${NEW_NET_HTTP_CONF_FILE}" >${DIFF_OUT} 2>&1 )
     then
         CONFIG_UPDATED=true
     fi
@@ -272,10 +276,10 @@ if (\$${NET}_header_check = \"${NET}-not-checked\") {
 done
 
 # Reloads the configuration if the file has been updated.
-if  ( ! diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" ) || \
-	( ! diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" ) || \
-	( ! diff "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" ) || \
-	( ! diff "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}" )
+if  ( ! diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" >${DIFF_OUT} 2>&1 ) || \
+	( ! diff "${OLD_LOCALNET_CONF_FILE}" "${NEW_LOCALNET_CONF_FILE}" >${DIFF_OUT} 2>&1 ) || \
+	( ! diff "${OLD_NETWORKS_CONF_FILE}" "${NEW_NETWORKS_CONF_FILE}" >${DIFF_OUT} 2>&1 ) || \
+	( ! diff "${OLD_REQLIMIT_CONF_FILE}" "${NEW_REQLIMIT_CONF_FILE}" >${DIFF_OUT} 2>&1 )
 then
     CONFIG_UPDATED=true
 fi

@@ -60,6 +60,10 @@ ${DEBUG} && echo "nginx_sync_config: [DEBUG] Running"
 ${DEBUG} && echo "nginx_sync_config: [DEBUG] CONF_HOST_NAME=${CONF_HOST_NAME}"
 ${DEBUG} && echo "nginx_sync_config: [DEBUG] hostname=$(hostname)"
 
+# Diff output (full file/dir contents) is only useful for debugging; hide it otherwise.
+DIFF_OUT=/dev/null
+${DEBUG} && DIFF_OUT=/dev/stdout
+
 # If host config should be syncd.
 SYNC_DIFF=false
 if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
@@ -87,19 +91,19 @@ then
 
     # If there are differences, sync them.
     nginx_revert_config_errors --pattern "${CONFIG_TMP}/*/*/*.conf.err"
-	if ! diff -r ${CERTS} ${NEW_CERTS_TMP}
+	if ! diff -r ${CERTS} ${NEW_CERTS_TMP} >${DIFF_OUT} 2>&1
 	then
 		rm -rf ${CERTS}/*
 		mv ${NEW_CERTS_TMP}/* ${CERTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -r ${OLD_VHOSTS_TMP} ${NEW_VHOSTS_TMP}
+	if ! diff -r ${OLD_VHOSTS_TMP} ${NEW_VHOSTS_TMP} >${DIFF_OUT} 2>&1
 	then
 		rm -rf ${VHOSTS}/*
 		mv ${NEW_VHOSTS_TMP}/* ${VHOSTS}/
 		SYNC_DIFF=true
 	fi
-	if ! diff -r ${OLD_STREAM_TMP} ${NEW_STREAM_TMP}
+	if ! diff -r ${OLD_STREAM_TMP} ${NEW_STREAM_TMP} >${DIFF_OUT} 2>&1
 	then
 		rm -rf ${STREAM}/*
 		mv ${NEW_STREAM_TMP}/* ${STREAM}/

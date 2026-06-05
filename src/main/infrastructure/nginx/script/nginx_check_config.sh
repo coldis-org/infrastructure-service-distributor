@@ -76,7 +76,7 @@ do
 	nginx_file_with_error=$( echo ${nginx_error} | grep "${conf_file_format}" | sed -e "s#.*\(${conf_file_format}\).*#\1#" )
 	if [ ! -z "${nginx_file_with_error}" ]
 	then
-		error_reason="nginx reported an error referencing this file:${nginx_error}"
+		error_reason="${nginx_error}"
 	fi
 
     # Gets the file with certificate error.
@@ -132,14 +132,15 @@ do
 			;;
 	esac
 
-	# Logs the reason before moving the file with error.
+	# Moves the file with error, logging the reason on a single line (the trailing
+	# "nginx: configuration file ... test failed" boilerplate is stripped).
 	last_nginx_file_with_error=${nginx_file_with_error}
-	[ -z "${error_reason}" ] && error_reason="nginx test failed:${nginx_error}"
-	echo "nginx_check_config: [WARN] Reason for moving ${nginx_file_with_error}: ${error_reason}"
-	echo "nginx_check_config: [INFO] Moving file ${nginx_file_with_error} to ${nginx_file_with_error}.err"
-	if mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err
+	[ -z "${error_reason}" ] && error_reason="${nginx_error}"
+	error_reason=$( echo "${error_reason}" | sed -e 's/ nginx: configuration file .* test failed//' -e 's/^[[:space:]]*//' )
+	if mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err 2>/dev/null
 	then
 		moved_count=$((moved_count + 1))
+		echo "nginx_check_config: [WARN] Moved ${nginx_file_with_error} to .err — ${error_reason}"
 	else
 		echo "nginx_check_config: [ERROR] Failed to move ${nginx_file_with_error} (check permissions, e.g. immutable flag via 'lsattr'). Stops trying to fix."
 		break

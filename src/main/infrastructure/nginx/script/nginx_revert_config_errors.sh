@@ -63,7 +63,7 @@ do
 					continue
 				fi
 			fi
-			mv ${ERROR_FILE} ${ORIGINAL_FILE}
+			mv ${ERROR_FILE} ${ORIGINAL_FILE} 2>/dev/null
 		fi
 	fi
 

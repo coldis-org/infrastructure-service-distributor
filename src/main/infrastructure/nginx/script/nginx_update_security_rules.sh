@@ -40,6 +40,10 @@ trap - INT TERM
 # Print arguments if on debug mode.
 ${DEBUG} && echo "nginx_update_security_rules: [DEBUG] Running"
 
+# Diff output (full file contents) is only useful for debugging; hide it otherwise.
+DIFF_OUT=/dev/null
+${DEBUG} && DIFF_OUT=/dev/stdout
+
 # Default parameters.
 CONFIG_UPDATED=false
 
@@ -61,7 +65,7 @@ cp -f ${REQUEST_EXCLUSIONS_FILE}.default ${NEW_REQUEST_EXCLUSIONS_FILE}
 sed '/# Automated exclusions\. Any rules after this line will be replaced\./,$d' ${NEW_REQUEST_EXCLUSIONS_FILE} > ${NEW_REQUEST_EXCLUSIONS_FILE}
 
 # Reloads the configuration if the file has been updated.
-if  ( ! diff "${OLD_REQUEST_EXCLUSIONS_FILE}" "${NEW_REQUEST_EXCLUSIONS_FILE}" )
+if  ( ! diff "${OLD_REQUEST_EXCLUSIONS_FILE}" "${NEW_REQUEST_EXCLUSIONS_FILE}" >${DIFF_OUT} 2>&1 )
 then
     CONFIG_UPDATED=true
 fi

@@ -38,7 +38,7 @@ while :; do
 
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_sync_config: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -56,16 +56,16 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_sync_config'"
-${DEBUG} && echo "CONF_HOST_NAME=${CONF_HOST_NAME}"
-${DEBUG} && echo "hostname=$(hostname)"
+${DEBUG} && echo "nginx_sync_config: [DEBUG] Running"
+${DEBUG} && echo "nginx_sync_config: [DEBUG] CONF_HOST_NAME=${CONF_HOST_NAME}"
+${DEBUG} && echo "nginx_sync_config: [DEBUG] hostname=$(hostname)"
 
 # If host config should be syncd.
 SYNC_DIFF=false
 if [ ! -z "${CONF_HOST_NAME}" ] && [ "localhost" != "${CONF_HOST_NAME}" ] && [ "$(hostname)" != "${CONF_HOST_NAME}" ]
 then
 
-	${DEBUG} && echo "Synching config"
+	${DEBUG} && echo "nginx_sync_config: [DEBUG] Synching config"
 	# Prepares folders.
 	rm -rf ${OLD_VHOSTS_TMP} ${OLD_STREAM_TMP} \
 			${NEW_VHOSTS_TMP} ${NEW_CERTS_TMP} ${NEW_STREAM_TMP}
@@ -79,7 +79,7 @@ then
 	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/vhost/
 	# Exit if config distributor is down.
 	if [ $? -ne 0 ]; then
-		${DEBUG} && echo "Failed to download folder"
+		${DEBUG} && echo "nginx_sync_config: [DEBUG] Failed to download folder"
 		exit 0
 	fi
 	wget --header="Host: $INTERNAL_SYNC_CONF_HOST_NAME" --recursive --no-parent -q -R "index.html*" -P ${NEW_CONFIG_TMP}/.. ${CONF_HOST_NAME}/cert/ --exclude-directories="cert/archive,cert/csr,cert/keys"
@@ -111,10 +111,10 @@ fi
 # Returns if the configuration was updated.
 if ${SYNC_DIFF}
 then
-	echo "Changes detected when synching config. Should reload configuration."
+	echo "nginx_sync_config: [INFO] Changes detected when synching config. Should reload configuration."
     return 0
 else 
-	echo "No changes detected when synching config. Should not reload configuration."
+	echo "nginx_sync_config: [INFO] No changes detected when synching config. Should not reload configuration."
     return 1
 fi
 

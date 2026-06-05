@@ -34,12 +34,12 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_cert_cleanup'"
+${DEBUG} && echo "nginx_cert_cleanup: [DEBUG] Running"
 
 # Only runs if cleanup is enabled.
 if ! ${CERT_CLEANUP}
 then
-	${DEBUG} && echo "Certificate cleanup is disabled. Set CERT_CLEANUP=true to enable."
+	${DEBUG} && echo "nginx_cert_cleanup: [DEBUG] Certificate cleanup is disabled. Set CERT_CLEANUP=true to enable."
 	return 0
 fi
 
@@ -53,7 +53,7 @@ do
 		do
 			if [ -e "${entry}" ]
 			then
-				echo "nginx_cert_cleanup: Removing duplicate certificate entry ${entry}"
+				echo "nginx_cert_cleanup: [INFO] Removing duplicate certificate entry ${entry}"
 				rm -rf "${entry}"
 			fi
 		done
@@ -66,14 +66,14 @@ then
 	do
 		if [ -e "${entry}" ]
 		then
-			echo "nginx_cert_cleanup: Removing duplicate certificate entry ${entry}"
+			echo "nginx_cert_cleanup: [INFO] Removing duplicate certificate entry ${entry}"
 			rm -f "${entry}"
 		fi
 	done
 fi
 
 # Removes temporary certificate directories (tmp-*, www-tmp*, www.tmp*) older than configured days.
-${DEBUG} && echo "Checking for temporary certificates older than ${CERT_CLEANUP_TEMP_MAX_DAYS} days"
+${DEBUG} && echo "nginx_cert_cleanup: [DEBUG] Checking for temporary certificates older than ${CERT_CLEANUP_TEMP_MAX_DAYS} days"
 live_dir=/etc/letsencrypt/live
 if [ -d "${live_dir}" ]
 then
@@ -86,7 +86,7 @@ then
 			if [ ${entry_age_days} -ge ${CERT_CLEANUP_TEMP_MAX_DAYS} ]
 			then
 				cert_name=$(basename "${entry}")
-				echo "nginx_cert_cleanup: Removing temporary certificate '${cert_name}' (${entry_age_days} days old)"
+				echo "nginx_cert_cleanup: [INFO] Removing temporary certificate '${cert_name}' (${entry_age_days} days old)"
 				rm -rf "/etc/letsencrypt/live/${cert_name}"
 				rm -rf "/etc/letsencrypt/archive/${cert_name}"
 				rm -f "/etc/letsencrypt/renewal/${cert_name}.conf"

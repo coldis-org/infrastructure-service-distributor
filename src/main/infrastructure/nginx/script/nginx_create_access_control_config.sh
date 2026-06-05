@@ -43,11 +43,11 @@ while :; do
 	shift
 done
 
-${DEBUG} && echo "Policies: ${AUTH_POLICIES}"
-${DEBUG} && echo "Service: ${ACCESS_SERVICE}"
+${DEBUG} && echo "nginx_create_access_control_config: [DEBUG] Policies: ${AUTH_POLICIES}"
+${DEBUG} && echo "nginx_create_access_control_config: [DEBUG] Service: ${ACCESS_SERVICE}"
 
 CONF_FILE="$ACCESS_FILE_DIR/access-identity-management.conf"
-${DEBUG} && echo "Creating file: ${CONF_FILE}"
+${DEBUG} && echo "nginx_create_access_control_config: [DEBUG] Creating file: ${CONF_FILE}"
 
 if [ "$ENVIRONMENT" = "PROD" ] || [ "$ENVIRONMENT" = "PRODUCTION" ]; then
 	{
@@ -110,4 +110,4 @@ EOF
 
 fi
 
-${DEBUG} && echo "File access content: ${CONF_FILE}" && cat "${CONF_FILE}"
+${DEBUG} && echo "nginx_create_access_control_config: [DEBUG] File access content: ${CONF_FILE}" && cat "${CONF_FILE}"

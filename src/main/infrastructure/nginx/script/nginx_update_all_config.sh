@@ -32,7 +32,17 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_update_all_config'"
+${DEBUG} && echo "nginx_update_all_config: [DEBUG] Running"
+
+# Prevents overlapping runs: cron fires every minute, and a slow sync/check must not
+# race the next invocation (which caused duplicate file moves and 'cannot stat' errors).
+LOCK_FILE=/tmp/nginx_update_all_config.lock
+exec 9>"${LOCK_FILE}"
+if ! flock -n 9
+then
+	echo "nginx_update_all_config: [INFO] Previous run still active; skipping this tick."
+	exit 0
+fi
 
 # If configuration should be reloaded.
 SHOULD_RELOAD=false

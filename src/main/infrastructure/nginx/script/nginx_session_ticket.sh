@@ -39,7 +39,7 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_session_ticket'"
+${DEBUG} && echo "nginx_session_ticket: [DEBUG] Running"
 
 mkdir -p ${TICKER_FOLDER}
 if [ "${ONLY_IF_MISSING}" = "false" ] || [ ! -f ${TICKER_FOLDER}/current.key ] || [ ! -f ${TICKER_FOLDER}/previous.key ]

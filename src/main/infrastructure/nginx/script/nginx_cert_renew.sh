@@ -32,7 +32,7 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_cert_renew'"
+${DEBUG} && echo "nginx_cert_renew: [DEBUG] Running"
 
 # Renews the certificates with certbot.
 ${NO_CERT_RENEW} || certbot renew

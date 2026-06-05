@@ -25,7 +25,7 @@ while :; do
 			;;
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_remove_temporary_service_vhost: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -37,8 +37,8 @@ while :; do
 done
 
 # Print if debug mode
-${DEBUG} && echo "Running 'nginx_remove_temporary_service_vhost'."
-${DEBUG} && echo "TEMP_PREFIX = $TEMP_PREFIX"
+${DEBUG} && echo "nginx_remove_temporary_service_vhost: [DEBUG] Running"
+${DEBUG} && echo "nginx_remove_temporary_service_vhost: [DEBUG] TEMP_PREFIX = $TEMP_PREFIX"
 
 # Using unavaialble variables should fail the script.
 set -o nounset
@@ -47,5 +47,5 @@ set -o nounset
 trap - INT TERM
 
 # Removing temporary vhosts.
-${DEBUG} && echo "Removing temporary vhosts."
+${DEBUG} && echo "nginx_remove_temporary_service_vhost: [DEBUG] Removing temporary vhosts."
 rm $VHOSTS_FOLDER/${TEMP_PREFIX}-*.conf* -v || true

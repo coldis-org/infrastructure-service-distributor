@@ -15,7 +15,7 @@ while :; do
 			;;
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_update_conf_hostname_runtime: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -38,8 +38,8 @@ if [ -f "$ENV_FILE" ]; then
 fi
 
 # Update web-config address on runtime
-${DEBUG} && echo "Running sed -i \"s|http://.*|http://${CONF_HOST_NAME};|\" $CERTBOT_FILE"
+${DEBUG} && echo "nginx_update_conf_hostname_runtime: [DEBUG] Running sed -i \"s|http://.*|http://${CONF_HOST_NAME};|\" $CERTBOT_FILE"
 sed -i "s|http://.*|http://${CONF_HOST_NAME};|" $CERTBOT_FILE
 
-${DEBUG} && echo "Running nginx_check_config"
+${DEBUG} && echo "nginx_update_conf_hostname_runtime: [DEBUG] Running nginx_check_config"
 nginx_check_config

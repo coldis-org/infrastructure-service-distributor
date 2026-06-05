@@ -32,7 +32,7 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_install_all_basic_certs'"
+${DEBUG} && echo "nginx_install_all_basic_certs: [DEBUG] Running"
 
 # Installs all basic certificates.
 nginx_session_ticket --only-if-missing

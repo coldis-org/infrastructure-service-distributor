@@ -19,7 +19,7 @@ while :; do
 			
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_update_security_rules: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -38,7 +38,7 @@ set +u
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_update_nets'"
+${DEBUG} && echo "nginx_update_security_rules: [DEBUG] Running"
 
 # Default parameters.
 CONFIG_UPDATED=false
@@ -65,7 +65,7 @@ if  ( ! diff "${OLD_REQUEST_EXCLUSIONS_FILE}" "${NEW_REQUEST_EXCLUSIONS_FILE}" )
 then
     CONFIG_UPDATED=true
 fi
-${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
+${DEBUG} && echo "nginx_update_security_rules: [DEBUG] CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
 	cp -f ${NEW_REQUEST_EXCLUSIONS_FILE} ${REQUEST_EXCLUSIONS_FILE}
@@ -77,10 +77,10 @@ rm -f ${OLD_REQUEST_EXCLUSIONS_FILE} ${NEW_REQUEST_EXCLUSIONS_FILE}
 # Returns if the configuration was updated.
 if ${CONFIG_UPDATED}
 then
-	echo "Changes detected in exclusion files. Should reload configuration."
+	echo "nginx_update_security_rules: [INFO] Changes detected in exclusion files. Should reload configuration."
 	return 0
 else 
-	echo "No changes detected in exclusion files. Should not reload configuration."
+	echo "nginx_update_security_rules: [INFO] No changes detected in exclusion files. Should not reload configuration."
 	return 1
 fi
 

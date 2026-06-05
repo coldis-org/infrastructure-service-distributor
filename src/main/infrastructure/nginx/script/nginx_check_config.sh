@@ -47,7 +47,7 @@ done
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${debug} && echo "Running 'nginx_check_config'"
+${debug} && echo "nginx_check_config: [DEBUG] Running"
 
 # Error files.
 initial_no_error_files=$( find ${conf_folder} -type f -name "${no_error_files_name_pattern}" )
@@ -62,17 +62,23 @@ nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
 config_valid=true
 last_nginx_file_with_error=
 cert_with_error=
+moved_count=0
 conf_file_format="/etc/nginx/[^ ]*/[^ ]*.conf"
 while [ ! -z "${nginx_error}" ]
 do
 	config_valid=false
-	
+	error_reason=
+
 	# Get only emerg output
 	nginx_error=$( echo ${nginx_error} | sed "s/.*${error_pattern}//")
 
 	# Tries to get the file with error.
 	nginx_file_with_error=$( echo ${nginx_error} | grep "${conf_file_format}" | sed -e "s#.*\(${conf_file_format}\).*#\1#" )
-	
+	if [ ! -z "${nginx_file_with_error}" ]
+	then
+		error_reason="nginx reported an error referencing this file:${nginx_error}"
+	fi
+
     # Gets the file with certificate error.
     if [ -z "${nginx_file_with_error}" ]
     then
@@ -80,7 +86,7 @@ do
 		if [ ! -z "${cert_with_error}" ]
 		then
 	        nginx_file_with_error=$( grep -R -m 1 "${cert_with_error}" "${conf_folder}" 2>/dev/null | cut -d: -f1 )
-			echo "Certificate ${cert_with_error} not found"
+			error_reason="certificate ${cert_with_error} could not be loaded (file missing or unreadable)"
 		fi
     fi
 
@@ -93,26 +99,47 @@ do
             nginx_file_with_error=$( grep -R -i -l -m 1 "\${${unknown_var}}" ${conf_folder}vhost.d/ ${conf_folder}conf.d/vhost.d/ 2>/dev/null | head -1 )
             if [ ! -z "${nginx_file_with_error}" ]
             then
-                echo "Unknown variable '${unknown_var}' found in file"
+                error_reason="unknown variable '${unknown_var}' referenced by this file"
             fi
         fi
     fi
-    
+
 	# If it is the main file, breaks.
-	if [ "${nginx_file_with_error}" = "" ] 
+	if [ "${nginx_file_with_error}" = "" ]
 	then
-	    echo "No file with error. Stops trying to fix."
+	    echo "nginx_check_config: [WARN] No file with error. Stops trying to fix."
         break
 	elif [ "${nginx_file_with_error}" = "${last_nginx_file_with_error}" ]
 	then
-		echo "Error loop. Stops trying to fix."
+		echo "nginx_check_config: [WARN] Error loop on ${nginx_file_with_error}. Stops trying to fix."
 		break
 	fi
-	
-	# Moves the file with error.
+
+	# Never move shared include fragments: the error is reported at the fragment's
+	# line, but the real problem is in a file that includes it in a wrong context.
+	# Drop the fragment from the current error text and re-scan it for the next
+	# file/error in place, without re-running 'nginx -t'.
+	case "${nginx_file_with_error}" in
+		*/include.d/*)
+			echo "nginx_check_config: [WARN] Error references include fragment ${nginx_file_with_error}; not moving it (the actual error is in a file that includes this fragment). Skipping to next error."
+			last_nginx_file_with_error=${nginx_file_with_error}
+			nginx_error=$( echo "${nginx_error}" | sed "s#${nginx_file_with_error}##g" )
+			continue
+			;;
+	esac
+
+	# Logs the reason before moving the file with error.
 	last_nginx_file_with_error=${nginx_file_with_error}
-	echo "Error in file. Moving file ${nginx_file_with_error} to ${nginx_file_with_error}.err"
-	mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err
+	[ -z "${error_reason}" ] && error_reason="nginx test failed:${nginx_error}"
+	echo "nginx_check_config: [WARN] Reason for moving ${nginx_file_with_error}: ${error_reason}"
+	echo "nginx_check_config: [INFO] Moving file ${nginx_file_with_error} to ${nginx_file_with_error}.err"
+	if mv -f ${nginx_file_with_error} ${nginx_file_with_error}.err
+	then
+		moved_count=$((moved_count + 1))
+	else
+		echo "nginx_check_config: [ERROR] Failed to move ${nginx_file_with_error} (check permissions, e.g. immutable flag via 'lsattr'). Stops trying to fix."
+		break
+	fi
 
 	# Increments the error count for the file (only if MAX_CONFIG_ERROR_COUNT is set).
 	if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ]
@@ -133,6 +160,7 @@ do
 	${debug} && echo ${nginx_error}
 	
 done
+echo "nginx_check_config: [INFO] Moved ${moved_count} file(s) with errors this run."
 final_no_error_files=$( find ${conf_folder} -type f -name "${no_error_files_name_pattern}" )
 
 # Resets error count for files that are now valid (only if MAX_CONFIG_ERROR_COUNT is set).
@@ -156,7 +184,7 @@ for to_be_contained_item in ${to_be_contained_list}
 do
 	if ! echo ${should_contain_list} | grep -q ${to_be_contained_item}
     then
-    	echo "New file without errors: ${to_be_contained_item}"
+    	echo "nginx_check_config: [INFO] New file without errors: ${to_be_contained_item}"
         new_files_without_errors=true
         break
     fi
@@ -167,16 +195,16 @@ ${debug} && echo "new_files_without_errors=${new_files_without_errors}"
 should_reload=false
 if ${skip_reload}
 then
-    echo "No reloading defined."
+    echo "nginx_check_config: [INFO] No reloading defined."
 else
     if ${reload_only_if_errors_change}
     then
     	if ${new_files_without_errors}
     	then
-    		echo "New configuration files without errors."
+    		echo "nginx_check_config: [INFO] New configuration files without errors."
     		should_reload=true
     	else
-    	    echo "No new configuration files without errors. Skipping reload."
+    	    echo "nginx_check_config: [INFO] No new configuration files without errors. Skipping reload."
     		should_reload=false
     	fi
     else
@@ -199,7 +227,7 @@ fi
 
 if ${should_reload}
 then
-	echo "Reloading configuration."
+	echo "nginx_check_config: [INFO] Reloading configuration."
 	${skip_reload} || nginx_variables ${skip_reload_param}
 	${skip_reload} || nginx -s reload
 fi

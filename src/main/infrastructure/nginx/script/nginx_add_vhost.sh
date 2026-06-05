@@ -30,7 +30,7 @@ while :; do
 			;;
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_add_vhost: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -51,9 +51,9 @@ trap - INT TERM
 VHOST=${VHOSTS}/${VHOST_NAME}.conf
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_add_vhost'"
-${DEBUG} && echo "VHOST_NAME=${VHOST_NAME}"
-${DEBUG} && echo "VHOST=${VHOST}"
+${DEBUG} && echo "nginx_add_vhost: [DEBUG] Running"
+${DEBUG} && echo "nginx_add_vhost: [DEBUG] VHOST_NAME=${VHOST_NAME}"
+${DEBUG} && echo "nginx_add_vhost: [DEBUG] VHOST=${VHOST}"
 
 # Reads the input file line by line.
 mkdir -p $(dirname ${VHOST})
@@ -73,10 +73,10 @@ then
 	mv ${VHOST} ${VHOST}.old
 	mv ${VHOST}.tmp ${VHOST}
 	# If the config cannot be reloaded.
-	${DEBUG} && echo "Reloading config"
+	${DEBUG} && echo "nginx_add_vhost: [DEBUG] Reloading config"
 	nginx_variables
 	nginx_check_config
 	rm -f ${VHOST}.old
 else 
-	echo "Config file '${VHOST}' has not changed. Skipping."
+	echo "nginx_add_vhost: [WARN] Config file '${VHOST}' has not changed. Skipping."
 fi

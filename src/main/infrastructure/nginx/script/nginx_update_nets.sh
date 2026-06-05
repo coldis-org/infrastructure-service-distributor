@@ -25,7 +25,7 @@ while :; do
 			
 		# Other option.
 		?*)
-			printf 'WARN: Unknown option (ignored): %s\n' "$1" >&2
+			printf 'nginx_update_nets: [WARN] Unknown option (ignored): %s\n' "$1" >&2
 			;;
 
 		# No more options.
@@ -44,7 +44,7 @@ set +u
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_update_nets'"
+${DEBUG} && echo "nginx_update_nets: [DEBUG] Running"
 
 # Default parameters.
 CONFIG_UPDATED=false
@@ -222,7 +222,7 @@ if (\$${NET}_header_check = \"${NET}-not-checked\") {
 		# Initilize svars.
 		NEW_HOST_CONFIG=
 		NET_IP=
-		${DEBUG} && echo "Entry ${HOST_NUMBER}"
+		${DEBUG} && echo "nginx_update_nets: [DEBUG] Entry ${HOST_NUMBER}"
 
         # If the host name is valid.
         if [ ! -z "${HOST_NAME:=}" ]
@@ -236,7 +236,7 @@ if (\$${NET}_header_check = \"${NET}-not-checked\") {
 			
 				# Replaces them in the net file. Get the next line after entry from file.
 				NEW_HOST_CONFIG="allow ${NET_IP};"
-				${DEBUG} && echo "NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
+				${DEBUG} && echo "nginx_update_nets: [DEBUG] NEW_HOST_CONFIG=${NEW_HOST_CONFIG}"
 				sed -i "/# Entry ${HOST_NUMBER}\.$/!b;n;c ${NEW_HOST_CONFIG}" ${NEW_NET_CONF_FILE}
 				
 				# Adds the ip to the network list.
@@ -247,7 +247,7 @@ if (\$${NET}_header_check = \"${NET}-not-checked\") {
 				
 			# If the Intranet IP is not valid.
 			else
-				${DEBUG} && echo "Invalid net IP: ${NET_IP}"
+				${DEBUG} && echo "nginx_update_nets: [DEBUG] Invalid net IP: ${NET_IP}"
 			fi
 		
 		fi
@@ -279,7 +279,7 @@ if  ( ! diff "${OLD_REQLIMITZONE_CONF_FILE}" "${NEW_REQLIMITZONE_CONF_FILE}" ) |
 then
     CONFIG_UPDATED=true
 fi
-${DEBUG} && echo "CONFIG_UPDATED=${CONFIG_UPDATED}"
+${DEBUG} && echo "nginx_update_nets: [DEBUG] CONFIG_UPDATED=${CONFIG_UPDATED}"
 if ${CONFIG_UPDATED}
 then
 	cp -f ${NEW_LOCALNET_CONF_FILE} ${LOCALNET_CONF_FILE}
@@ -297,10 +297,10 @@ rm -f ${OLD_REQLIMITZONE_CONF_FILE} ${NEW_REQLIMITZONE_CONF_FILE} \
 # Returns if the configuration was updated.
 if ${CONFIG_UPDATED}
 then
-	echo "Changes detected in network files. Should reload configuration."
+	echo "nginx_update_nets: [INFO] Changes detected in network files. Should reload configuration."
 	return 0
 else 
-	echo "No changes detected in network files. Should not reload configuration."
+	echo "nginx_update_nets: [INFO] No changes detected in network files. Should not reload configuration."
 	return 1
 fi
 

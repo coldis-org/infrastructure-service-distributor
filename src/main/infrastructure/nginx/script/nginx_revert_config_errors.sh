@@ -35,7 +35,7 @@ done
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_revert_config_errors'"
+${DEBUG} && echo "nginx_revert_config_errors: [DEBUG] Running"
 
 # Error files.
 ERROR_FILES=$( find ${conf_folder} -type f -name "${error_files_name_pattern}" )
@@ -57,7 +57,7 @@ do
 				error_count=${error_count:-0}
 				if [ "${error_count}" -ge "${MAX_CONFIG_ERROR_COUNT}" ]
 				then
-					${DEBUG} && echo "Removing ${ERROR_FILE} (error count: ${error_count}, max: ${MAX_CONFIG_ERROR_COUNT})"
+					${DEBUG} && echo "nginx_revert_config_errors: [DEBUG] Removing ${ERROR_FILE} (error count: ${error_count}, max: ${MAX_CONFIG_ERROR_COUNT})"
 					rm -f ${ERROR_FILE}
 					sed -i "\#^${ORIGINAL_FILE} #d" ${error_counts_file}
 					continue

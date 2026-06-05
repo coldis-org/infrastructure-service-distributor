@@ -65,8 +65,8 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_add_vhost'"
-${DEBUG} && echo "DOMAINS=${DOMAINS}"
+${DEBUG} && echo "nginx_install_cert: [DEBUG] Running"
+${DEBUG} && echo "nginx_install_cert: [DEBUG] DOMAINS=${DOMAINS}"
 
 
 # Installs the cert.

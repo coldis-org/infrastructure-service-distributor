@@ -32,7 +32,7 @@ set -o nounset
 trap - INT TERM
 
 # Print arguments if on debug mode.
-${DEBUG} && echo "Running 'nginx_update_all_certs'"
+${DEBUG} && echo "nginx_update_all_certs: [DEBUG] Running"
 
 # Updates all certificates.
 nginx_session_ticket ${DEBUG_OPT}

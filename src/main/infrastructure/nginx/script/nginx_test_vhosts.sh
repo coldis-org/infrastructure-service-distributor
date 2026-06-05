@@ -103,6 +103,7 @@ fi
 
 # Adds the candidates back one by one, keeping the valid ones and quarantining the broken ones.
 broken_count=0
+broken_files=
 for candidate in ${candidates}
 do
 	mv -f "${candidate}.err" "${candidate}" 2>/dev/null
@@ -128,6 +129,7 @@ do
 	if ${is_broken}
 	then
 		broken_count=$(( broken_count + 1 ))
+		broken_files="${broken_files} ${candidate}"
 		reason=$( echo "${test_output}" | grep "${error_pattern}" | head -1 | sed -e "s/.*${error_pattern}//" -e 's/ nginx: configuration file .* test failed//' -e 's/^[[:space:]]*//' )
 		echo "nginx_test_vhosts: [WARN] Broken file ${candidate} — ${reason}"
 
@@ -156,5 +158,5 @@ do
 	fi
 done
 
-echo "nginx_test_vhosts: [INFO] Tested $( echo "${candidates}" | wc -w | tr -d ' ' ) file(s); ${broken_count} broken."
+echo "nginx_test_vhosts: [INFO] Tested $( echo "${candidates}" | wc -w | tr -d ' ' ) file(s); ${broken_count} broken.${broken_files:+ Broken:${broken_files}}"
 return 0

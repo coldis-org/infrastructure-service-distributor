@@ -8,7 +8,6 @@ DEBUG=${DEBUG:=false}
 DEBUG_OPT=
 conf_folder=/etc/nginx/
 vhosts_folder=/etc/nginx/vhost.d
-error_counts_file=/etc/nginx/.config_error_counts
 error_pattern="\[emerg\]"
 fragment=
 report_only=false
@@ -138,20 +137,9 @@ do
 			# Pure report: leave the file active so the config is unchanged.
 			:
 		else
-			# Quarantines the broken file.
+			# Quarantines the broken file (the retest backoff is owned by
+			# nginx_revert_config_errors via the .err marker).
 			mv -f "${candidate}" "${candidate}.err" 2>/dev/null
-
-			# Increments the error count for the file (only if MAX_CONFIG_ERROR_COUNT is set).
-			if [ ! -z "${MAX_CONFIG_ERROR_COUNT}" ]
-			then
-				touch ${error_counts_file}
-				current_count=$( grep "^${candidate} " ${error_counts_file} 2>/dev/null | awk '{print $NF}' | tr -dc '0-9' )
-				current_count=${current_count:-0}
-				new_count=$((current_count + 1))
-				sed -i "\#^${candidate} #d" ${error_counts_file}
-				echo "${candidate} ${new_count}" >> ${error_counts_file}
-				${DEBUG} && echo "nginx_test_vhosts: [DEBUG] Error count for ${candidate}: ${new_count}"
-			fi
 		fi
 	else
 		${DEBUG} && echo "nginx_test_vhosts: [DEBUG] OK ${candidate}"

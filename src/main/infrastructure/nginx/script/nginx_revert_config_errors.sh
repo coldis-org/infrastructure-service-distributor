@@ -9,7 +9,10 @@ DEBUG_OPT=
 conf_folder=/etc/nginx/
 error_files_name_pattern=
 custom_pattern=false
-state_file=/etc/nginx/.config_retest_state
+# Kept in vhost.d (a mounted volume) and as a dotfile so it survives container
+# restarts and is ignored by nginx's *.conf glob and by nginx_sync_config's
+# *-globs (rm/cp/diff do not match dotfiles).
+state_file=/etc/nginx/vhost.d/.config_retest_state
 
 # Retest backoff schedule (seconds); all tunable via environment.
 # A broken file is retested every run during the grace window, then with an

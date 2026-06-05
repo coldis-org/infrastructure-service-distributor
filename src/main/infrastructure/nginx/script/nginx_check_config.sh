@@ -116,14 +116,18 @@ do
 	fi
 
 	# Never move shared include fragments: the error is reported at the fragment's
-	# line, but the real problem is in a file that includes it in a wrong context.
-	# Drop the fragment from the current error text and re-scan it for the next
-	# file/error in place, without re-running 'nginx -t'.
+	# line, but the real problem is in a file that includes it in a wrong context
+	# (which nginx does not name). Identify and quarantine the offending includer(s)
+	# by testing each file that includes the fragment, then re-test and continue.
 	case "${nginx_file_with_error}" in
 		*/include.d/*)
-			echo "nginx_check_config: [WARN] Error references include fragment ${nginx_file_with_error}; not moving it (the actual error is in a file that includes this fragment). Skipping to next error."
+			echo "nginx_check_config: [WARN] Error references include fragment ${nginx_file_with_error}; testing the files that include it."
+			nginx_test_vhosts --fragment "${nginx_file_with_error}" ${debug_opt}
 			last_nginx_file_with_error=${nginx_file_with_error}
-			nginx_error=$( echo "${nginx_error}" | sed "s#${nginx_file_with_error}##g" )
+			nginx_test=$( nginx -t 2>&1 1>/dev/null )
+			${debug} && echo "${nginx_test}"
+			nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
+			${debug} && echo ${nginx_error}
 			continue
 			;;
 	esac

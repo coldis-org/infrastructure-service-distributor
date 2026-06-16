@@ -232,6 +232,7 @@ ENV	CERTBOT_PORT=80\
 	MAX_REQLIMIT_RATIO=10000r/m\
 	INTERNAL_SYNC_CONF_HOST_NAME=web-config.intranet.supersim.com.br\
 	FALLBACK_PORT=6767\
+	VTS_STATUS_PORT=9913\
 	NOCACHE_VALUE="no-store, no-cache"\
 	AUTH_POLICIES="developers:developers"\
 	ACCESS_SERVICE="infrastructure-service-identity-management-proxy"

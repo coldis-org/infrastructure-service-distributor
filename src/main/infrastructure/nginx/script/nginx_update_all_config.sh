@@ -59,6 +59,11 @@ then
     SHOULD_RELOAD=true
 fi
 
+if nginx_update_threat_blocklist ${DEBUG_OPT}
+then
+    SHOULD_RELOAD=true
+fi
+
 # Checks configuration and reloads configuration if needed.
 ONLY_IF_ERRORS_CHANGE_OPT="--only-if-errors-change"
 if ${SHOULD_RELOAD}

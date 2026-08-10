@@ -87,7 +87,26 @@ then
 	fi
 	
 # Otherwise, use certbot.
-else 
+else
 	certbot certonly --expand --webroot --http-01-port ${CERTBOT_PORT} -w /usr/share/nginx/html \
 		--non-interactive --agree-tos --email technology@${HOST_NAME} ${FORCE_RENEW_ARG} ${DOMAINS}
+	CERTBOT_EXIT=$?
+
+	# The certbot exit code is the primary signal. certbot may also exit 0
+	# on storage failures (for example "archive directory exists for <domain>"
+	# when /etc/letsencrypt/archive/ has leftovers without matching live/
+	# symlinks) — in that case the log shows the error but the exit is 0, and
+	# no fullchain.pem is written. Verify the primary domain's lineage file
+	# actually exists to catch that silent case as well.
+	PRIMARY_DOMAIN=$(echo "${DOMAINS}" | awk '{for (i=1; i<=NF; i++) if ($i == "-d") { print $(i+1); exit }}')
+	CERT_PATH="/etc/letsencrypt/live/${PRIMARY_DOMAIN}/fullchain.pem"
+
+	if [ ${CERTBOT_EXIT} -ne 0 ]; then
+		echo "nginx_install_cert: [ERROR] certbot exited ${CERTBOT_EXIT} for ${PRIMARY_DOMAIN}" >&2
+		exit ${CERTBOT_EXIT}
+	fi
+	if [ ! -f "${CERT_PATH}" ]; then
+		echo "nginx_install_cert: [ERROR] certbot exited 0 but ${CERT_PATH} does not exist" >&2
+		exit 1
+	fi
 fi

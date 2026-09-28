@@ -1,67 +1,148 @@
 {
-	"id": "/infrastructure-service-distributor-nginx",
-	"instances": 1,
-	"cpus": 0.5,
-	"disk": 200,
-	"mem": 256,
-	"networks": [
-		{
-			"mode": "container/bridge"
-		}
-	],
-	"container": {
-		"portMappings": [
-			{
-				"containerPort": 80,
-				"hostPort": 80
-			},
-			{
-				"containerPort": 443,
-				"hostPort": 443
-			}
-		],
-		"type": "DOCKER",
-		"volumes": [
-			{
-				"containerPath": "/etc/nginx/vhost.d",
-				"mode": "RW",
-				"external": {
-					"name": "infrastructure-service-distributor-nginx-vhost",
-					"provider": "dvdi",
-					"options": {
-						"dvdi/driver": "rexray"
-					}
-				}
-			},
-			{
-				"containerPath": "/etc/letsencrypt",
-				"mode": "RW",
-				"external": {
-					"name": "infrastructure-service-distributor-nginx-cert",
-					"provider": "dvdi",
-					"options": {
-						"dvdi/driver": "rexray"
-					}
-				}
-			}
-		],
-		"docker": {
-			"image": "coldis/infrastructure-service-distributor-nginx",
-			"forcePullImage": true
-		}
-	},
-	"env": {
-		"HOSTNAME": "coldis.org",
-		"INTRANET_IP": "127.0.0.1",
-		"AVAILABLE_NETS": "developernet,intranet,extranet"
-	},
-	"healthChecks": [],
-	"args": [],
-	"acceptedResourceRoles": [
-		"slave_public"
-	],
-	"upgradeStrategy": {
-		"minimumHealthCapacity": 0,
-		"maximumOverCapacity": 0
-	}
+  "Job": {
+    "ID": "infrastructure-service-distributor-nginx",
+    "Name": "infrastructure-service-distributor-nginx",
+    "Type": "service",
+    "Datacenters": [
+      "*"
+    ],
+    "NodePool": "default",
+    "TaskGroups": [
+      {
+        "Name": "infrastructure-service-distributor-nginx",
+        "Count": 1,
+        "RestartPolicy": {
+          "Attempts": 10,
+          "Interval": 300000000000,
+          "Delay": 25000000000,
+          "Mode": "delay"
+        },
+        "Networks": [
+          {
+            "Mode": "host",
+            "ReservedPorts": [
+              {
+                "Label": "http",
+                "Value": 80
+              },
+              {
+                "Label": "https",
+                "Value": 443
+              },
+              {
+                "Label": "vts",
+                "Value": 9913
+              }
+            ]
+          }
+        ],
+        "Tasks": [
+          {
+            "Name": "infrastructure-service-distributor-nginx",
+            "Driver": "docker",
+            "Config": {
+              "image": "coldis/infrastructure-service-distributor-nginx:1.9.7-dev",
+              "network_mode": "bridge",
+              "cpu_hard_limit": true,
+              "ports": [
+                "http",
+                "https",
+                "vts"
+              ],
+              "volumes": [
+                "local:/etc/nginx/upstream.d"
+              ]
+            },
+            "Env": {
+              "ENVIRONMENT": "development",
+              "HOST_NAME": "example.org",
+              "LOG_LEVEL": "info",
+              "CERT_ENV_DIR": "/dev/shm/certs"
+            },
+            "Vault": {
+              "Role": "infrastructure-service-distributor"
+            },
+            "Resources": {
+              "CPU": 2000,
+              "MemoryMB": 480
+            },
+            "LogConfig": {
+              "MaxFileSizeMB": 5,
+              "MaxFiles": 3
+            },
+            "Services": [
+              {
+                "Name": "infrastructure-service-distributor-nginx-vts",
+                "PortLabel": "vts",
+                "Provider": "consul",
+                "Tags": [
+                  "monitoring",
+                  "path=/status"
+                ],
+                "Checks": [
+                  {
+                    "Name": "nginx-alive",
+                    "Type": "http",
+                    "Method": "GET",
+                    "Path": "/status",
+                    "PortLabel": "vts",
+                    "Interval": 10000000000,
+                    "Timeout": 3000000000,
+                    "CheckRestart": {
+                      "Limit": 3,
+                      "Grace": 30000000000
+                    }
+                  }
+                ]
+              }
+            ],
+            "Templates": [
+              {
+                "DestPath": "local/upstream-vhost.conf",
+                "EmbeddedTmpl": "{{ range $i, $service := services -}}\n\t{{- $hasTag := false -}}\n\t{{- $fallback := \"127.0.0.1:6767\" -}}\n\t{{- $hasValidNode := false -}}\n\t{{- $isBackup := \"\" -}}\n\t{{- range $tag := $service.Tags -}}\n\t\t{{- if eq $tag \"web\" }}\n\t\t\t{{- $hasTag = true -}}\n\t\t{{- end -}}\n\t\t{{- if regexMatch \"^fallback=\" $tag }}\n\t\t\t{{- $fallback = replaceAll \"fallback=\" \"\" $tag }}\n\t\t{{- end -}}\n\t{{- end -}}\n\n\t{{- if $hasTag }}\n\t\t{{- range service $service.Name -}}\n\t\t\t{{- if and .Address .Port }}\n\t\t\t\t{{- $hasValidNode = true -}}\n\t\t\t\t{{- $isBackup = \"backup\" -}}\n\t\t\t{{- end -}}\n\t\t{{- end -}}\n\t{{- end }}\n\n\t{{- if $hasTag }}\nupstream {{ $service.Name }} {\n\t\t{{- if $hasValidNode }}\n\t\t\t{{- range service $service.Name -}}\n\t\t\t\t{{- if and .Address .Port }}\n\tserver {{ .Address }}:{{ .Port }};\n\t\t\t\t{{- end -}}\n\t\t\t{{- end }}\n\t\t{{- end }}\n\tserver {{ $fallback }} {{ $isBackup }};\n\tkeepalive 32;\n}\n\t{{- end }}\n{{- end }}",
+                "ChangeMode": "noop",
+                "ChangeScript": {
+                  "Command": "nginx_update_all_config",
+                  "Args": [],
+                  "Timeout": 5000000000,
+                  "FailOnError": false
+                },
+                "Envvars": false,
+                "Perms": "0644",
+                "Splay": 5000000000
+              },
+              {
+                "DestPath": "local/upstream-stream.conf",
+                "EmbeddedTmpl": "{{ range $i, $service := services -}}\n\t{{- $hasTag := false -}}\n\t{{- range $tag := $service.Tags -}}\n\t\t{{- if eq $tag \"stream\" }}\n\t\t\t{{- $hasTag = true -}}\n\t\t{{ end -}}\n\t{{- end -}}\n\n\t{{- if $hasTag }}\n\t\t{{- $hasValidNode := false }}\n\t\t{{- range service $service.Name -}}\n\t\t\t{{- if and .Address .Port }}\n\t\t\t\t{{- $hasValidNode = true -}}\n\t\t\t{{ end }}\n\t\t{{- end }}\n\n\t\t{{- if $hasValidNode }}\nupstream {{ $service.Name }} {\n\t\t\t{{- range service $service.Name -}}\n\t\t\t\t{{- if and .Address .Port }}\n\tserver {{ .Address }}:{{ .Port }};\n\t\t\t\t{{- end }}\n\t\t\t{{- end }}\n}\n\t\t{{ end }}\n\t{{- end }}\n{{- end }}",
+                "ChangeMode": "noop",
+                "ChangeScript": {
+                  "Command": "nginx_update_all_config",
+                  "Args": [],
+                  "Timeout": 5000000000,
+                  "FailOnError": false
+                },
+                "Envvars": false,
+                "Perms": "0644",
+                "Splay": 5000000000
+              },
+              {
+                "DestPath": "secrets/env/CERT_FULLCHAIN",
+                "EmbeddedTmpl": "CERT_FULLCHAIN={{ with secret \"kv/data/default/common/certs\" }}{{ .Data.data.CERT_FULLCHAIN | toJSON }}{{ end }}",
+                "ChangeMode": "restart",
+                "Envvars": true,
+                "ErrMissingKey": false
+              },
+              {
+                "DestPath": "secrets/env/CERT_PRIVKEY",
+                "EmbeddedTmpl": "CERT_PRIVKEY={{ with secret \"kv/data/default/common/certs\" }}{{ .Data.data.CERT_PRIVKEY | toJSON }}{{ end }}",
+                "ChangeMode": "restart",
+                "Envvars": true,
+                "ErrMissingKey": false
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 }

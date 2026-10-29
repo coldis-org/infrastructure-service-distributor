@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.29.3
+ARG NGINX_VERSION=1.30.6
 ARG BUILD_PROC=16 
 
 # From Debian.

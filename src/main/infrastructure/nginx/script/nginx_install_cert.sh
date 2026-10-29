@@ -81,7 +81,7 @@ then
 	then
 		TEMP_CERT_CONF_FILE=$(echo "/tmp/${DOMAIN}-cert.conf" | sed -e "s/\*/_/g")
 		cat /etc/ssl/openssl.cnf > ${TEMP_CERT_CONF_FILE}
-		echo "[SAN]\nsubjectAltName=DNS:${DOMAIN}" >> ${TEMP_CERT_CONF_FILE}
+		printf "[SAN]\nsubjectAltName=DNS:%s\n" "${DOMAIN}" >> ${TEMP_CERT_CONF_FILE}
 		openssl req -newkey rsa:4096 -new -x509 -sha256 -reqexts SAN -extensions SAN -nodes -days 365 -keyout ${CERT_FOLDER}/key.pem -out ${CERT_FOLDER}/cert.pem -subj "${DOMAINS}" -config ${TEMP_CERT_CONF_FILE}
 		rm ${TEMP_CERT_CONF_FILE}
 	fi

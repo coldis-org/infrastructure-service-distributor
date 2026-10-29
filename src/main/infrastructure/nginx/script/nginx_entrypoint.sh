@@ -10,7 +10,13 @@ chmod +x /etc/docker_env
 NGINX_JOBS_FILE=/etc/cron.d/nginx_jobs
 envsubst < "${NGINX_JOBS_FILE}" | sponge "${NGINX_JOBS_FILE}"
 crontab /etc/cron.d/nginx_jobs
-service cron start
+# Debian uses the cron service, Alpine the busybox crond.
+if command -v service >/dev/null 2>&1
+then
+	service cron start
+else
+	crond
+fi
 
 # Tune Nginx opts.
 . /usr/bin/nginx_tune_opts

@@ -1,5 +1,6 @@
-# From Nginx image.
-FROM coldis/infrastructure-service-distributor-nginx:1.9.5
+# From Nginx image (overridable, e.g. to build on top of the Alpine variant).
+ARG BASE_IMAGE=coldis/infrastructure-service-distributor-nginx:1.9.6-alpine
+FROM ${BASE_IMAGE}
 
 # Copies config.
 COPY config/nginx /etc/nginx

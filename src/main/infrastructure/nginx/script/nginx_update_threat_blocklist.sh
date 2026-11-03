@@ -7,8 +7,8 @@
 # is executed, not sourced, so it ends with exit, whatever shell runs it.
 #
 # The response is the body of nginx's `geo $threat_blocked` block: one entry
-# per line, `<IPv4 or IPv6 address>[/<prefix>] 1;`, plus blank and `#` comment
-# lines. Every line is validated before the file is replaced; one bad line
+# per line, `<IPv4 or IPv6 address>[/<prefix>] 1;` (indentation and a trailing
+# `# comment` allowed), plus blank and `#` comment lines. Every line is validated before the file is replaced; one bad line
 # keeps the previous list (since boot: the file is not on a volume, so a
 # container starts with the image's empty list until the first good pull). Refused as entries: blanket prefixes (IPv4 shorter
 # than /8, IPv6 shorter than /16) and private, loopback, link-local and
@@ -85,7 +85,13 @@ ${DEBUG} && echo "Running 'nginx_update_threat_blocklist'"
 ${DEBUG} && echo "THREAT_BLOCKLIST_URL=${THREAT_BLOCKLIST_URL}"
 ${DEBUG} && echo "THREAT_BLOCKLIST_TARGET=${THREAT_BLOCKLIST_TARGET}"
 
-# Counts the entries of a list file (blank and comment lines are not entries).
+# The entries of a list file, one per line, without indentation, inline
+# comments or carriage returns (blank and comment lines are not entries).
+normalized_entries() {
+	grep -vE '^[[:space:]]*(#|$)' "$1" 2>/dev/null | tr -d '\r' \
+		| sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//'
+}
+# Counts the entries of a list file.
 list_entries() {
 	grep -cvE '^[[:space:]]*(#|$)' "$1" 2>/dev/null
 }
@@ -109,6 +115,7 @@ fi
 
 # Templates typically provide just host:port: a URL with no path gets
 # /blocklist; one with a path is used as configured.
+THREAT_BLOCKLIST_URL="${THREAT_BLOCKLIST_URL%/}"
 case "${THREAT_BLOCKLIST_URL#*://}" in
 	*/*) ;;
 	*) THREAT_BLOCKLIST_URL="${THREAT_BLOCKLIST_URL}/blocklist" ;;
@@ -202,7 +209,7 @@ INVALID_LINES=$(awk '
 	{ sub(/\r$/, "") }
 	/^[ \t]*$/ || /^[ \t]*#/ { next }
 	{
-		if ($0 !~ /^[0-9A-Fa-f.:\/]+[ \t]+1;[ \t]*$/) { bad("not \"<address>[/<prefix>] 1;\""); next }
+		if ($0 !~ /^[ \t]*[0-9A-Fa-f.:\/]+[ \t]+1;[ \t]*(#.*)?$/) { bad("not \"<address>[/<prefix>] 1;\""); next }
 		entry = $1
 		prefix = -1
 		slash = index(entry, "/")
@@ -265,10 +272,10 @@ then
 	exit 1
 fi
 
-# Changed means the entries changed: a generation-time comment in the
-# service's output must not reload nginx on every run.
+# Changed means the entries changed: a generation-time comment, or a change of
+# indentation, in the service's output must not reload nginx on every run.
 if [ -f "${THREAT_BLOCKLIST_TARGET}" ] \
-	&& [ "$(grep -vE '^[[:space:]]*(#|$)' "${TMP_NEW}" | tr -d '\r')" = "$(grep -vE '^[[:space:]]*(#|$)' "${THREAT_BLOCKLIST_TARGET}" | tr -d '\r')" ]
+	&& [ "$(normalized_entries "${TMP_NEW}")" = "$(normalized_entries "${THREAT_BLOCKLIST_TARGET}")" ]
 then
 	${DEBUG} && echo "Threat blocklist unchanged; not reloading."
 	rm -f "${TMP_NEW}"

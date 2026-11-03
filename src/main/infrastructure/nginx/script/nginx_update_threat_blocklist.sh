@@ -15,6 +15,9 @@
 # shared ranges, so a bad list cannot block the whole internet or the
 # cluster's own networks.
 #
+# THREAT_BLOCKLIST_URL is logged when a pull fails: it must not carry
+# credentials (userinfo or query); the token has its own variable.
+#
 # An empty list is written only when it is explicit: a body made of comment
 # lines (e.g. `# empty`) clears the blocklist. A zero-byte or blank body is
 # treated as a failed pull and keeps the previous list.
@@ -127,7 +130,9 @@ fi
 
 rm -f "${TMP_NEW}"
 # The token goes through a wgetrc readable only by this process's user, not
-# argv, where any local user could read it in the process list.
+# argv, where any local user could read it in the process list. Redirects
+# are not followed: wget would carry the header to wherever a 30x points,
+# another host or plain http included.
 WGET_CONFIG=$(mktemp)
 chmod 600 "${WGET_CONFIG}"
 if [ -n "${THREAT_BLOCKLIST_TOKEN}" ]
@@ -138,7 +143,7 @@ fi
 # trickles bytes would hold nginx_update_all_config's lock (and every vhost,
 # cert and network update behind it). timeout bounds the whole pull.
 WGETRC="${WGET_CONFIG}" timeout "$((THREAT_BLOCKLIST_TIMEOUT * 3))" \
-	wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
+	wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 --max-redirect=0 \
 	"${THREAT_BLOCKLIST_URL}"
 WGET_STATUS=$?
 rm -f "${WGET_CONFIG}"

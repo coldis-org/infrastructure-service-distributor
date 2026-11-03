@@ -26,6 +26,8 @@
 # Update environment variables.
 ENV_FILE="/local/application.env"
 if [ -f "$ENV_FILE" ]; then
+  # Rendered at runtime by the scheduler (Consul/Vault values); nothing to follow.
+  # shellcheck source=/dev/null
   . "$ENV_FILE"
 fi
 

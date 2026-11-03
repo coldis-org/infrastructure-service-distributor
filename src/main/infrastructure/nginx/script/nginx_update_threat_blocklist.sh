@@ -16,8 +16,12 @@
 # cluster's own networks.
 #
 # An empty list is written only when it is explicit: a body made of comment
-# lines (e.g. `# empty`) clears the blocklist. A zero-byte body is treated as
-# a failed pull and keeps the previous list.
+# lines (e.g. `# empty`) clears the blocklist. A zero-byte or blank body is
+# treated as a failed pull and keeps the previous list.
+#
+# "Changed" is measured against the file on disk: if the reload that follows
+# a change fails for an unrelated reason, the running nginx keeps the old list
+# until the entries change again.
 
 # Update environment variables.
 ENV_FILE="/local/application.env"
@@ -132,9 +136,9 @@ then
 	exit 1
 fi
 
-if [ ! -s "${TMP_NEW}" ]
+if ! grep -q '[^[:space:]]' "${TMP_NEW}" 2>/dev/null
 then
-	echo "nginx_update_threat_blocklist: downloaded file is empty (zero bytes); keeping previous blocklist. An intentional empty list is a body of comment lines."
+	echo "nginx_update_threat_blocklist: downloaded file is empty or blank; keeping previous blocklist. An intentional empty list is a body of comment lines."
 	rm -f "${TMP_NEW}"
 	exit 1
 fi

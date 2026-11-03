@@ -3,12 +3,14 @@
 # Pulls the threat blocklist from infrastructure-service-threat-blocklist and
 # atomically replaces /etc/nginx/conf.d/include.d/threat-blocklist-ips.conf. Returns 0 when the file
 # changed (caller should reload nginx), 1 otherwise — same contract as
-# nginx_sync_config so it slots into nginx_update_all_config the same way.
+# nginx_sync_config so it slots into nginx_update_all_config the same way. It
+# is executed, not sourced, so it ends with exit, whatever shell runs it.
 #
 # The response is the body of nginx's `geo $threat_blocked` block: one entry
 # per line, `<IPv4 or IPv6 address>[/<prefix>] 1;`, plus blank and `#` comment
 # lines. Every line is validated before the file is replaced; one bad line
-# keeps the previous list. Refused as entries: blanket prefixes (IPv4 shorter
+# keeps the previous list (since boot: the file is not on a volume, so a
+# container starts with the image's empty list until the first good pull). Refused as entries: blanket prefixes (IPv4 shorter
 # than /8, IPv6 shorter than /16) and private, loopback, link-local and
 # shared ranges, so a bad list cannot block the whole internet or the
 # cluster's own networks.
@@ -68,7 +70,7 @@ ${DEBUG} && echo "THREAT_BLOCKLIST_TARGET=${THREAT_BLOCKLIST_TARGET}"
 if [ -z "${THREAT_BLOCKLIST_URL}" ]
 then
 	${DEBUG} && echo "THREAT_BLOCKLIST_URL not set; skipping pull."
-	return 1
+	exit 1
 fi
 
 # Append /blocklist if missing — templates typically provide just host:port.
@@ -89,7 +91,11 @@ if [ -n "${THREAT_BLOCKLIST_TOKEN}" ]
 then
 	printf 'header = Authorization: Bearer %s\n' "${THREAT_BLOCKLIST_TOKEN}" > "${WGET_CONFIG}"
 fi
-WGETRC="${WGET_CONFIG}" wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
+# --timeout bounds each DNS/connect/read wait, not the download: a service that
+# trickles bytes would hold nginx_update_all_config's lock (and every vhost,
+# cert and network update behind it). timeout bounds the whole pull.
+WGETRC="${WGET_CONFIG}" timeout "$((THREAT_BLOCKLIST_TIMEOUT * 3))" \
+	wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
 	"${THREAT_BLOCKLIST_URL}"
 WGET_STATUS=$?
 rm -f "${WGET_CONFIG}"
@@ -98,14 +104,14 @@ then
 	# Keep last-good file on transport failure.
 	echo "nginx_update_threat_blocklist: pull failed (wget exit ${WGET_STATUS}); keeping previous blocklist."
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 
 if [ ! -s "${TMP_NEW}" ]
 then
 	echo "nginx_update_threat_blocklist: downloaded file is empty (zero bytes); keeping previous blocklist. An intentional empty list is a body of comment lines."
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 
 # Validates every line; prints the offending ones (with line numbers) and
@@ -191,7 +197,7 @@ then
 	echo "nginx_update_threat_blocklist: downloaded list has invalid entries; keeping previous blocklist."
 	printf '%s\n' "${INVALID_LINES}" | head -20
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 
 # nginx is the parser that matters: the candidate is parsed as a geo block on
@@ -208,23 +214,23 @@ then
 	echo "nginx_update_threat_blocklist: nginx refuses the downloaded list; keeping previous blocklist."
 	printf '%s\n' "${NGINX_ERRORS}" | head -5
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 
 if [ -f "${THREAT_BLOCKLIST_TARGET}" ] && cmp -s "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}"
 then
 	${DEBUG} && echo "Threat blocklist unchanged; not reloading."
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 
 if ! mv "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}"
 then
 	echo "nginx_update_threat_blocklist: could not replace ${THREAT_BLOCKLIST_TARGET}; keeping previous blocklist."
 	rm -f "${TMP_NEW}"
-	return 1
+	exit 1
 fi
 chown nginx:nginx "${THREAT_BLOCKLIST_TARGET}" 2>/dev/null || true
 ENTRIES=$(grep -cvE '^[[:space:]]*(#|$)' "${THREAT_BLOCKLIST_TARGET}")
 echo "nginx_update_threat_blocklist: blocklist updated (${ENTRIES} entries). Should reload."
-return 0
+exit 0

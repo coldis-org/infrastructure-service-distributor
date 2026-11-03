@@ -109,11 +109,23 @@ case "${THREAT_BLOCKLIST_URL#*://}" in
 	*) THREAT_BLOCKLIST_URL="${THREAT_BLOCKLIST_URL}/blocklist" ;;
 esac
 
+# Plain http is allowed (the service may sit on an internal network), but the
+# token is a credential: it is only ever sent over https. A token with any
+# other URL (a bare host:port is http to wget) stops the pull.
+if [ -n "${THREAT_BLOCKLIST_TOKEN}" ]
+then
+	case "${THREAT_BLOCKLIST_URL}" in
+		https://*) ;;
+		*)
+			echo "nginx_update_threat_blocklist: THREAT_BLOCKLIST_TOKEN is set but ${THREAT_BLOCKLIST_URL} is not https; not sending it. Keeping previous blocklist."
+			exit 1
+			;;
+	esac
+fi
+
 rm -f "${TMP_NEW}"
 # The token goes through a wgetrc readable only by this process's user, not
-# argv, where any local user could read it in the process list. The URL is
-# the service's address inside the cluster network (host:port from the
-# deployment), which is why the scheme is not forced to https.
+# argv, where any local user could read it in the process list.
 WGET_CONFIG=$(mktemp)
 chmod 600 "${WGET_CONFIG}"
 if [ -n "${THREAT_BLOCKLIST_TOKEN}" ]

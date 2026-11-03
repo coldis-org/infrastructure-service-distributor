@@ -31,6 +31,16 @@ THREAT_BLOCKLIST_URL=${THREAT_BLOCKLIST_URL:=}
 THREAT_BLOCKLIST_TOKEN=${THREAT_BLOCKLIST_TOKEN:=}
 THREAT_BLOCKLIST_TARGET=${THREAT_BLOCKLIST_TARGET:=/etc/nginx/conf.d/include.d/threat-blocklist-ips.conf}
 THREAT_BLOCKLIST_TIMEOUT=${THREAT_BLOCKLIST_TIMEOUT:=10}
+# Seconds; the image's other timeouts carry a unit (15s, 120s), so one is
+# accepted here too. Anything else falls back to 10 rather than failing the
+# arithmetic below on every run.
+THREAT_BLOCKLIST_TIMEOUT=${THREAT_BLOCKLIST_TIMEOUT%s}
+case "${THREAT_BLOCKLIST_TIMEOUT}" in
+	''|*[!0-9]*|0)
+		echo "nginx_update_threat_blocklist: THREAT_BLOCKLIST_TIMEOUT is not a number of seconds; using 10."
+		THREAT_BLOCKLIST_TIMEOUT=10
+		;;
+esac
 TMP_NEW="${THREAT_BLOCKLIST_TARGET}.new"   # beside the target, so the rename is atomic
 
 # For each argument.
@@ -66,17 +76,32 @@ ${DEBUG} && echo "Running 'nginx_update_threat_blocklist'"
 ${DEBUG} && echo "THREAT_BLOCKLIST_URL=${THREAT_BLOCKLIST_URL}"
 ${DEBUG} && echo "THREAT_BLOCKLIST_TARGET=${THREAT_BLOCKLIST_TARGET}"
 
-# Skip when not configured (typical for local/dev).
+# Counts the entries of a list file (blank and comment lines are not entries).
+list_entries() {
+	grep -cvE '^[[:space:]]*(#|$)' "$1" 2>/dev/null
+}
+
+# Not configured (typical for local/dev), or switched off: no pull, and no
+# blocking either. Clearing the URL is how an operator turns off a list that
+# blocks the wrong clients, so a list still in place is cleared (one reload).
 if [ -z "${THREAT_BLOCKLIST_URL}" ]
 then
 	${DEBUG} && echo "THREAT_BLOCKLIST_URL not set; skipping pull."
+	if [ "$(list_entries "${THREAT_BLOCKLIST_TARGET}")" -gt 0 ] 2>/dev/null
+	then
+		printf '# THREAT_BLOCKLIST_URL is not set: nothing is blocked.\n' > "${TMP_NEW}" \
+			&& mv "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}" \
+			&& echo "nginx_update_threat_blocklist: THREAT_BLOCKLIST_URL unset; blocklist cleared. Should reload." \
+			&& exit 0
+		rm -f "${TMP_NEW}"
+	fi
 	exit 1
 fi
 
-# Append /blocklist if missing — templates typically provide just host:port.
-THREAT_BLOCKLIST_URL="${THREAT_BLOCKLIST_URL%/}"
-case "${THREAT_BLOCKLIST_URL}" in
-	*/blocklist) ;;
+# Templates typically provide just host:port: a URL with no path gets
+# /blocklist; one with a path is used as configured.
+case "${THREAT_BLOCKLIST_URL#*://}" in
+	*/*) ;;
 	*) THREAT_BLOCKLIST_URL="${THREAT_BLOCKLIST_URL}/blocklist" ;;
 esac
 
@@ -102,7 +127,7 @@ rm -f "${WGET_CONFIG}"
 if [ ${WGET_STATUS} -ne 0 ]
 then
 	# Keep last-good file on transport failure.
-	echo "nginx_update_threat_blocklist: pull failed (wget exit ${WGET_STATUS}); keeping previous blocklist."
+	echo "nginx_update_threat_blocklist: pull of ${THREAT_BLOCKLIST_URL} failed (wget exit ${WGET_STATUS}); keeping previous blocklist."
 	rm -f "${TMP_NEW}"
 	exit 1
 fi
@@ -217,7 +242,10 @@ then
 	exit 1
 fi
 
-if [ -f "${THREAT_BLOCKLIST_TARGET}" ] && cmp -s "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}"
+# Changed means the entries changed: a generation-time comment in the
+# service's output must not reload nginx on every run.
+if [ -f "${THREAT_BLOCKLIST_TARGET}" ] \
+	&& [ "$(grep -vE '^[[:space:]]*(#|$)' "${TMP_NEW}" | tr -d '\r')" = "$(grep -vE '^[[:space:]]*(#|$)' "${THREAT_BLOCKLIST_TARGET}" | tr -d '\r')" ]
 then
 	${DEBUG} && echo "Threat blocklist unchanged; not reloading."
 	rm -f "${TMP_NEW}"
@@ -231,6 +259,6 @@ then
 	exit 1
 fi
 chown nginx:nginx "${THREAT_BLOCKLIST_TARGET}" 2>/dev/null || true
-ENTRIES=$(grep -cvE '^[[:space:]]*(#|$)' "${THREAT_BLOCKLIST_TARGET}")
+ENTRIES=$(list_entries "${THREAT_BLOCKLIST_TARGET}")
 echo "nginx_update_threat_blocklist: blocklist updated (${ENTRIES} entries). Should reload."
 exit 0

@@ -62,11 +62,13 @@ config_valid=true
 last_nginx_file_with_error=
 cert_with_error=
 moved_count=0
+vhost_audit_done=false
 conf_file_format="/etc/nginx/[^ ]*/[^ ]*.conf"
 while [ ! -z "${nginx_error}" ]
 do
 	config_valid=false
 	error_reason=
+	cert_with_error=
 
 	# Get only emerg output
 	nginx_error=$( echo ${nginx_error} | sed "s/.*${error_pattern}//")
@@ -78,13 +80,20 @@ do
 		error_reason="${nginx_error}"
 	fi
 
-    # Gets the file with certificate error.
+    # Gets the file with certificate error. Nginx does not name the offending file, so it is
+    # looked up by the certificate path, over the whole tree so that stream.d/upstream.d are
+    # covered too: -F because the path is full of dots, -l for plain file names (-m 1 counts
+    # per file, so it yields one line per matching file), --include so only an active *.conf
+    # can be blamed — never a stale copy (.old/.tmp left behind by nginx_add_vhost while it
+    # calls this script) nor an already quarantined one (.err/.dead) — and nginx.conf itself
+    # is excluded, since moving it away would take the whole server down.
     if [ -z "${nginx_file_with_error}" ]
     then
         cert_with_error=$( echo ${nginx_error} | grep "cannot load certificate" | sed -e "s#.*cannot load certificate\( key\)\? \"##" -e "s#\.pem.*#\.pem#" )
 		if [ ! -z "${cert_with_error}" ]
 		then
-	        nginx_file_with_error=$( grep -R -m 1 "${cert_with_error}" "${conf_folder}" 2>/dev/null | cut -d: -f1 )
+	        nginx_file_with_error=$( grep -R -l -I -F --include='*.conf' "${cert_with_error}" "${conf_folder}" 2>/dev/null \
+	        		| grep -v -x -F "${conf_folder}nginx.conf" | head -1 )
 			error_reason="certificate ${cert_with_error} could not be loaded (file missing or unreadable)"
 		fi
     fi
@@ -102,6 +111,25 @@ do
             fi
         fi
     fi
+
+	# A certificate error whose path is in no active config (so the lookup above found
+	# nothing): bisects the vhosts to find and quarantine the one that fails to load it.
+	# Restricted to this case on purpose — for an error that names no file and is not about
+	# a certificate (typically a global limit such as "could not build ... hash", which no
+	# single vhost owns) bisecting would quarantine whichever vhost happens to trip the
+	# limit first. Done at most once per run: a second pass would find nothing new, so the
+	# loop is still guaranteed to terminate on the check below.
+	if [ "${nginx_file_with_error}" = "" ] && [ ! -z "${cert_with_error}" ] && ! ${vhost_audit_done}
+	then
+		echo "nginx_check_config: [WARN] Error names no configuration file; bisecting the vhosts."
+		vhost_audit_done=true
+		nginx_test_vhosts ${debug_opt}
+		nginx_test=$( nginx -t 2>&1 1>/dev/null )
+		${debug} && echo "${nginx_test}"
+		nginx_error=$( echo ${nginx_test} | grep "${error_pattern}" )
+		${debug} && echo ${nginx_error}
+		continue
+	fi
 
 	# If it is the main file, breaks.
 	if [ "${nginx_file_with_error}" = "" ]

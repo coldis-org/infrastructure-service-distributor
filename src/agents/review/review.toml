@@ -1,0 +1,38 @@
+# Review configuration for infrastructure-service-distributor.
+#
+# Read by the review from THIS file on master (never from the branch under review),
+# so a branch cannot weaken its own review.
+
+[project]
+name = "infrastructure-service-distributor"
+
+# ---------------------------------------------------------------------------
+# Gates: the platform family plus security. This repository builds container
+# images, boot scripts and server configuration; it has no application code, so
+# no service-* gate applies. No Nomad module folder with modules.json exists
+# here, so there is no infrastructure gate.
+# ---------------------------------------------------------------------------
+
+[gates.security]
+type = "agent"
+mandatory = true          # required by contract: uncappable, no exceptions
+
+[gates.platform-image]
+type = "agent"
+mandatory = true          # Dockerfile*
+
+[gates.platform-runtime]
+type = "agent"
+mandatory = true          # *.sh scripts and the cron/ tables
+
+[gates.platform-config]
+type = "agent"
+mandatory = true          # nginx/ModSecurity/httpd *.conf, haproxy *.cfg, pgbouncer.ini
+
+[gates.shellcheck]
+type = "rule"
+script = "rules/shellcheck.sh"
+mandatory = true
+level = 2                                   # a failing check contributes HIGH
+include_paths = [".*\\.sh$"]
+params = { severity = "warning" }

@@ -235,7 +235,10 @@ ENV	CERTBOT_PORT=80\
 	VTS_STATUS_PORT=9913\
 	NOCACHE_VALUE="no-store, no-cache"\
 	AUTH_POLICIES="developers:developers"\
-	ACCESS_SERVICE="infrastructure-service-identity-management-proxy"
+	ACCESS_SERVICE="infrastructure-service-identity-management-proxy"\
+	THREAT_BLOCKLIST_URL=\
+	THREAT_BLOCKLIST_TOKEN=\
+	THREAT_BLOCKLIST_TIMEOUT=10
 	
 ENTRYPOINT ["nginx_entrypoint"]
 CMD ["nginx", "-g", "daemon off;"]

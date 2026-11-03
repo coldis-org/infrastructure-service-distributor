@@ -29,7 +29,7 @@ THREAT_BLOCKLIST_URL=${THREAT_BLOCKLIST_URL:=}
 THREAT_BLOCKLIST_TOKEN=${THREAT_BLOCKLIST_TOKEN:=}
 THREAT_BLOCKLIST_TARGET=${THREAT_BLOCKLIST_TARGET:=/etc/nginx/conf.d/include.d/threat-blocklist-ips.conf}
 THREAT_BLOCKLIST_TIMEOUT=${THREAT_BLOCKLIST_TIMEOUT:=10}
-TMP_NEW=/tmp/threat-blocklist-ips.conf.new
+TMP_NEW="${THREAT_BLOCKLIST_TARGET}.new"   # beside the target, so the rename is atomic
 
 # For each argument.
 while :; do
@@ -79,16 +79,20 @@ case "${THREAT_BLOCKLIST_URL}" in
 esac
 
 rm -f "${TMP_NEW}"
+# The token goes through a wgetrc readable only by this process's user, not
+# argv, where any local user could read it in the process list. The URL is
+# the service's address inside the cluster network (host:port from the
+# deployment), which is why the scheme is not forced to https.
+WGET_CONFIG=$(mktemp)
+chmod 600 "${WGET_CONFIG}"
 if [ -n "${THREAT_BLOCKLIST_TOKEN}" ]
 then
-	wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
-		--header="Authorization: Bearer ${THREAT_BLOCKLIST_TOKEN}" \
-		"${THREAT_BLOCKLIST_URL}"
-else
-	wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
-		"${THREAT_BLOCKLIST_URL}"
+	printf 'header = Authorization: Bearer %s\n' "${THREAT_BLOCKLIST_TOKEN}" > "${WGET_CONFIG}"
 fi
+WGETRC="${WGET_CONFIG}" wget -q -O "${TMP_NEW}" --timeout="${THREAT_BLOCKLIST_TIMEOUT}" --tries=1 \
+	"${THREAT_BLOCKLIST_URL}"
 WGET_STATUS=$?
+rm -f "${WGET_CONFIG}"
 if [ ${WGET_STATUS} -ne 0 ]
 then
 	# Keep last-good file on transport failure.
@@ -109,8 +113,36 @@ fi
 # image): no interval expressions.
 INVALID_LINES=$(awk '
 	function octet(value) { return value ~ /^[0-9]+$/ && value + 0 <= 255 }
+	# Structure, not only characters: hex groups of 1 to 4 digits, at most
+	# one "::", 8 groups without it and fewer with it. No embedded IPv4 (a dot).
+	function ipv6(value,    rest, doubles, count, parts, i, empty) {
+		if (value ~ /[^0-9a-f:]/) return 0
+		rest = value; doubles = gsub(/::/, "::", rest)
+		if (doubles > 1 || value ~ /:::/) return 0
+		if (doubles == 0 && (value ~ /^:/ || value ~ /:$/)) return 0
+		count = split(value, parts, ":")
+		empty = 0
+		for (i = 1; i <= count; i++) {
+			if (parts[i] == "") { empty++; continue }
+			if (length(parts[i]) > 4) return 0
+		}
+		if (doubles == 0) return count == 8 && empty == 0
+		return count - empty <= 7
+	}
 	function bad(reason) { printf "  line %d (%s): %s\n", NR, reason, $0; status = 1 }
-	BEGIN { status = 0 }
+	function protect(name, a, b, c, d, bits) {
+		protected_count++
+		protected_name[protected_count] = name
+		protected_start[protected_count] = ((a * 256 + b) * 256 + c) * 256 + d
+		protected_end[protected_count] = protected_start[protected_count] + 2 ^ (32 - bits) - 1
+	}
+	BEGIN {
+		status = 0
+		protect("0.0.0.0/8", 0, 0, 0, 0, 8); protect("10.0.0.0/8", 10, 0, 0, 0, 8)
+		protect("100.64.0.0/10", 100, 64, 0, 0, 10); protect("127.0.0.0/8", 127, 0, 0, 0, 8)
+		protect("169.254.0.0/16", 169, 254, 0, 0, 16); protect("172.16.0.0/12", 172, 16, 0, 0, 12)
+		protect("192.168.0.0/16", 192, 168, 0, 0, 16)
+	}
 	{ sub(/\r$/, "") }
 	/^[ \t]*$/ || /^[ \t]*#/ { next }
 	{
@@ -128,19 +160,27 @@ INVALID_LINES=$(awk '
 			if (prefix > 128) { bad("IPv6 prefix above 128"); next }
 			if (prefix >= 0 && prefix < 16) { bad("IPv6 prefix shorter than /16"); next }
 			lower = tolower(entry)
-			if (lower == "::" || lower == "::1" || lower ~ /^f[cd]/ || lower ~ /^fe[89ab]/) { bad("private, loopback or link-local IPv6"); next }
+			if (!ipv6(lower)) { bad("not an IPv6 address"); next }
+			# ::/8 holds the unspecified, loopback and IPv4-mapped/compatible
+			# space, so an entry starting with 0 or :: is refused outright.
+			if (lower ~ /^0/ || lower ~ /^::/ || lower ~ /^f[cd]/ || lower ~ /^fe[89ab]/) { bad("private, loopback, link-local or IPv4-mapped IPv6"); next }
 			next
 		}
 		count = split(entry, octets, ".")
 		if (count != 4 || !octet(octets[1]) || !octet(octets[2]) || !octet(octets[3]) || !octet(octets[4])) { bad("not an IPv4 address"); next }
 		if (prefix > 32) { bad("IPv4 prefix above 32"); next }
 		if (prefix >= 0 && prefix < 8) { bad("IPv4 prefix shorter than /8"); next }
-		first = octets[1] + 0; second = octets[2] + 0
-		if (first == 0 || first == 10 || first == 127 \
-		    || (first == 100 && second >= 64 && second <= 127) \
-		    || (first == 169 && second == 254) \
-		    || (first == 172 && second >= 16 && second <= 31) \
-		    || (first == 192 && second == 168)) { bad("private, loopback, link-local or shared IPv4"); next }
+		# The whole range of the entry, not only its first address, must stay clear
+		# of the protected ranges: 172.0.0.0/8 starts outside 172.16/12 but
+		# covers it.
+		if (prefix < 0) prefix = 32
+		size = 2 ^ (32 - prefix)
+		start = ((octets[1] * 256 + octets[2]) * 256 + octets[3]) * 256 + octets[4]
+		start = start - (start % size)
+		finish = start + size - 1
+		for (i = 1; i <= protected_count; i++) {
+			if (start <= protected_end[i] && finish >= protected_start[i]) { bad("overlaps private, loopback, link-local or shared IPv4 " protected_name[i]); next }
+		}
 	}
 	END { exit status }
 ' "${TMP_NEW}")
@@ -159,7 +199,12 @@ then
 	return 1
 fi
 
-mv "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}"
+if ! mv "${TMP_NEW}" "${THREAT_BLOCKLIST_TARGET}"
+then
+	echo "nginx_update_threat_blocklist: could not replace ${THREAT_BLOCKLIST_TARGET}; keeping previous blocklist."
+	rm -f "${TMP_NEW}"
+	return 1
+fi
 chown nginx:nginx "${THREAT_BLOCKLIST_TARGET}" 2>/dev/null || true
 ENTRIES=$(grep -cvE '^[[:space:]]*(#|$)' "${THREAT_BLOCKLIST_TARGET}")
 echo "nginx_update_threat_blocklist: blocklist updated (${ENTRIES} entries). Should reload."

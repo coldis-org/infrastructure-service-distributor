@@ -127,6 +127,8 @@ INVALID_LINES=$(awk '
 			if (length(parts[i]) > 4) return 0
 		}
 		if (doubles == 0) return count == 8 && empty == 0
+		# nginx refuses a trailing "::" that stands for a single group (1:2:3:4:5:6:7::).
+		if (value ~ /::$/) return count - empty <= 6
 		return count - empty <= 7
 	}
 	function bad(reason) { printf "  line %d (%s): %s\n", NR, reason, $0; status = 1 }
@@ -188,6 +190,23 @@ if [ $? -ne 0 ]
 then
 	echo "nginx_update_threat_blocklist: downloaded list has invalid entries; keeping previous blocklist."
 	printf '%s\n' "${INVALID_LINES}" | head -20
+	rm -f "${TMP_NEW}"
+	return 1
+fi
+
+# nginx is the parser that matters: the candidate is parsed as a geo block on
+# its own before it replaces the live list, so anything the checks above let
+# through and nginx refuses keeps the previous list instead of failing the
+# reload (where nginx_check_config would quarantine the default servers).
+CANDIDATE_CONF=$(mktemp)
+printf 'events {}\nhttp { geo $threat_blocked_candidate { default 0; include %s; } }\n' "${TMP_NEW}" > "${CANDIDATE_CONF}"
+NGINX_ERRORS=$(nginx -t -q -c "${CANDIDATE_CONF}" 2>&1)
+NGINX_STATUS=$?
+rm -f "${CANDIDATE_CONF}"
+if [ ${NGINX_STATUS} -ne 0 ]
+then
+	echo "nginx_update_threat_blocklist: nginx refuses the downloaded list; keeping previous blocklist."
+	printf '%s\n' "${NGINX_ERRORS}" | head -5
 	rm -f "${TMP_NEW}"
 	return 1
 fi

@@ -139,6 +139,8 @@ case "${LDAPTLS_REQCERT:-}" in
 		exit 1
 		;;
 esac
+# The environment wins over every libldap config file (ldap.conf, ldaprc), so set it here.
+export LDAPTLS_REQCERT="${LDAPTLS_REQCERT:-demand}"
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
@@ -190,7 +192,8 @@ fi
 # PgBouncer expands $username into a 256-byte buffer and silently cuts the rest, which
 # breaks the filter. It must fit with a 63-byte user name (PostgreSQL's longest role name).
 PLACEHOLDERS=$(printf '%s' "${SEARCH_FILTER}" | grep -o '\$username' | wc -l)
-EXPANDED_LENGTH=$((${#SEARCH_FILTER} + PLACEHOLDERS * (63 - 9)))
+# PgBouncer counts bytes; ${#var} would count characters.
+EXPANDED_LENGTH=$(( $(printf '%s' "${SEARCH_FILTER}" | wc -c) + PLACEHOLDERS * (63 - 9) ))
 if [ "${EXPANDED_LENGTH}" -ge 256 ]
 then
 	echo "The LDAP search filter reaches ${EXPANDED_LENGTH} bytes with a 63-byte user name, PgBouncer takes 255 (fewer REJECT_USERS?)" >&2
@@ -211,9 +214,10 @@ ldap_option ldapsearchfilter "${SEARCH_FILTER}"
 # PgBouncer silently cuts the options to MAX_LDAP_CONFIG - 1 (1023) bytes and parses the rest:
 # a cut filter fails every login, but a dropped one falls back to (uid=$username) without the
 # BLOCKED and REJECT_USERS clauses. This check is what keeps that from happening.
-if [ "${#LDAP_OPTIONS}" -ge 1024 ]
+LDAP_OPTIONS_BYTES=$(( $(printf '%s' "${LDAP_OPTIONS}" | wc -c) ))
+if [ "${LDAP_OPTIONS_BYTES}" -ge 1024 ]
 then
-	echo "The LDAP options are ${#LDAP_OPTIONS} characters, too long for PgBouncer (fewer REJECT_USERS?)" >&2
+	echo "The LDAP options are ${LDAP_OPTIONS_BYTES} bytes, too long for PgBouncer (fewer REJECT_USERS?)" >&2
 	exit 1
 fi
 # The file holds the bind password: written to a new file under umask 077 (an existing one

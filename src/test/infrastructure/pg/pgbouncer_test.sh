@@ -30,7 +30,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" "$P-b14" "$P-b15" "$P-b16" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" "$P-b14" "$P-b15" "$P-b16" "$P-b17" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -234,6 +234,10 @@ if $HBA; then
 	refuses_to_boot "$P-b5" "with a search filter PgBouncer would cut" "PgBouncer takes 255" \
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" \
 		-e REJECT_USERS="$(printf 'service-user-%02d,' 1 2 3 4 5 6 7 8 9 10 11 12)"
+	# Five 12-letter accented names: they fit in 256 characters, not in 256 bytes.
+	refuses_to_boot "$P-b17" "with a search filter that fits in characters but not in bytes" "PgBouncer takes 255" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" \
+		-e REJECT_USERS="$(printf '\303\251\303\251\303\251\303\251\303\251\303\251\303\251\303\251\303\251\303\251\303\251\303\251%s,' 1 2 3 4 5)"
 	refuses_to_boot "$P-b6" "with a search filter without \$username" "must contain" \
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SEARCH_FILTER="(objectClass=posixAccount)"
 	refuses_to_boot "$P-b8" "with a line break in LDAP_PASSWORD" "must be a single line" \

@@ -8,7 +8,7 @@ LDAP, and an Apache httpd with ModSecurity. No application code; `pom.xml` (pare
 
 Image layering: `nginx` copies the `os_*` scripts out of `coldis/infrastructure-os` in a build
 stage and builds on the official `nginx` image; `nginx-config` builds `FROM` a released `nginx`
-image (`coldis/infrastructure-service-distributor-nginx:1.9.8`). `layer4`, `pg` and `web` build
+image (`coldis/infrastructure-service-distributor-nginx:1.9.9`). `layer4`, `pg` and `web` build
 on upstream images (`haproxy:2.3.7`, `debian:11.10-slim`, `httpd:2.4.48-buster`).
 
 ## Layout

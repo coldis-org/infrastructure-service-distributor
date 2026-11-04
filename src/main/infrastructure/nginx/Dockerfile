@@ -12,7 +12,8 @@ FROM nginx:${NGINX_VERSION} as build
 WORKDIR /sources
 
 # Mod security.
-ARG MODSEC_VERSION=3.0.14
+ARG MODSEC_VERSION=3.0.17
+ARG MODSEC_SHA256=f283b33d5c21130fd3a15c84a93a1abe12bd1949edaf44288b12af571b671a50
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		automake \
@@ -35,6 +36,7 @@ RUN apt-get update \
 		zlib1g-dev \
 		wget \
 	&& wget --quiet https://github.com/owasp-modsecurity/ModSecurity/releases/download/v${MODSEC_VERSION}/modsecurity-v${MODSEC_VERSION}.tar.gz \
+	&& echo "${MODSEC_SHA256}  modsecurity-v${MODSEC_VERSION}.tar.gz" | sha256sum -c - \
 	&& tar -xvzf modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& rm modsecurity-v${MODSEC_VERSION}.tar.gz \
 	&& mv *modsecurity* modsecurity \
@@ -45,8 +47,10 @@ RUN apt-get update \
 	&& make install
 	
 # VTS.
-ARG VTS_VERSION=0.2.4
+ARG VTS_VERSION=0.2.7
+ARG VTS_SHA256=0003bfa57da2106367fdc3f87760910c046e7df5545db73c880fc2b80350b14c
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
+	&& echo "${VTS_SHA256}  v${VTS_VERSION}.tar.gz" | sha256sum -c - \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \
 	&& mv *nginx-module-vts* nginx-module-vts 

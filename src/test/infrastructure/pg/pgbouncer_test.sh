@@ -4,7 +4,9 @@
 # pgbouncer_init generates, the rejected-user list, client TLS, the admin console (and the
 # RELOAD the Nomad template runs), several processes, and a bind password that needs
 # quoting. They run on the host with docker, on a private network: a throwaway OpenLDAP
-# (slapd on Alpine), a PostgreSQL, the image under test and a psql client.
+# (slapd on Alpine), a PostgreSQL, the image under test and a psql client. PostgreSQL asks
+# for scram-sha-256 and database.ini carries no password= (as in production), so a login
+# only succeeds if PgBouncer hands the client's LDAP password on to the server.
 #
 #   docker build -t distributor-pg-test src/main/infrastructure/pg
 #   src/test/infrastructure/pg/pgbouncer_test.sh distributor-pg-test
@@ -21,15 +23,17 @@ POSTGRES=postgres:18.6-alpine3.24
 P=pgbtest-$$
 PASSED=0
 FAILED=0
+SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
 trap cleanup EXIT
 pass() { PASSED=$((PASSED + 1)); echo "PASS: $1"; }
 fail() { FAILED=$((FAILED + 1)); echo "FAIL: $1${2:+ ($2)}"; }
+skip() { SKIPPED=$((SKIPPED + 1)); echo "SKIP: $1"; }
 check() { local name=$1 detail=$2; shift 2; if "$@"; then pass "$name"; else fail "$name" "$detail"; fi; } # <name> <detail> <test...>
 has() { case "$1" in *"$2"*) return 0 ;; esac; return 1; }
 rand() { head -c 18 /dev/urandom | base64 | tr -d '/+='; }
@@ -41,14 +45,17 @@ ODD_BIND_DN="cn=reader2,ou=services,$BASE_DN"
 ODD_BIND_PW="$(rand) \"q\"#, x"
 ALICE_PW=$(rand)
 BOB_PW=$(rand)
+CAROL_PW=$(rand)
 DW_PW=$(rand)
 MON_PW=$(rand)
 
-# Directory: posix users alice, datawarehouse and database.monitor; bob lacks posixAccount.
-posix_user() {
+# Directory: posix users alice, datawarehouse, database.monitor and carol (whose uid is not her
+# cn, so only a cn match lets her in); bob has a uid but no posixAccount. Only a bound user
+# can search, so a lost bind DN or password fails the logins.
+posix_user() { # <cn> <uid number> <password> [uid]
 	printf 'dn: cn=%s,ou=people,%s\nobjectClass: inetOrgPerson\nobjectClass: posixAccount\n' "$1" "$BASE_DN"
 	printf 'cn: %s\nsn: %s\nuid: %s\nuidNumber: %s\ngidNumber: %s\nhomeDirectory: /home/%s\nuserPassword: %s\n\n' \
-		"$1" "$1" "$1" "$2" "$2" "$1" "$3"
+		"$1" "$1" "${4:-$1}" "$2" "$2" "$1" "$3"
 }
 {
 	printf 'dn: %s\nobjectClass: dcObject\nobjectClass: organization\no: test\ndc: test\n\n' "$BASE_DN"
@@ -59,7 +66,8 @@ posix_user() {
 	posix_user alice 10001 "$ALICE_PW"
 	posix_user datawarehouse 10002 "$DW_PW"
 	posix_user database.monitor 10003 "$MON_PW"
-	printf 'dn: cn=bob,ou=people,%s\nobjectClass: inetOrgPerson\ncn: bob\nsn: bob\nuserPassword: %s\n\n' "$BASE_DN" "$BOB_PW"
+	posix_user carol 10004 "$CAROL_PW" c.arol
+	printf 'dn: cn=bob,ou=people,%s\nobjectClass: inetOrgPerson\ncn: bob\nsn: bob\nuid: bob\nuserPassword: %s\n\n' "$BASE_DN" "$BOB_PW"
 } > "$TMP/seed.ldif"
 cat > "$TMP/slapd.conf" <<EOF
 include /etc/openldap/schema/core.schema
@@ -73,7 +81,7 @@ database mdb
 directory /var/lib/openldap/test
 suffix "$BASE_DN"
 access to attrs=userPassword by self read by anonymous auth by * none
-access to * by * read
+access to * by users read by anonymous auth by * none
 EOF
 mkdir "$TMP/database"
 printf 'appdb = host=%s-pg port=5432 dbname=appdb\n' "$P" > "$TMP/database/database.ini"
@@ -83,7 +91,8 @@ docker create --name "$P-ldap" --network "$P" "$ALPINE" sh -c \
 	'apk add -q --no-cache openldap openldap-back-mdb >/dev/null && mkdir -p /var/lib/openldap/test /run/openldap \
 	&& slapadd -q -f /slapd.conf -l /seed.ldif && exec slapd -d 256 -f /slapd.conf -h ldap:///' >/dev/null || exit 2
 docker cp "$TMP/slapd.conf" "$P-ldap:/slapd.conf" && docker cp "$TMP/seed.ldif" "$P-ldap:/seed.ldif" && docker start "$P-ldap" >/dev/null || exit 2
-docker run -d --name "$P-pg" --network "$P" -e POSTGRES_HOST_AUTH_METHOD=trust "$POSTGRES" >/dev/null || exit 2
+docker run -d --name "$P-pg" --network "$P" -e POSTGRES_PASSWORD="$(rand)" -e POSTGRES_HOST_AUTH_METHOD=scram-sha-256 \
+	"$POSTGRES" >/dev/null || exit 2
 docker run -d --name "$P-client" --network "$P" --entrypoint sleep "$POSTGRES" infinity >/dev/null || exit 2
 
 wait_for() { # <seconds> <command...>
@@ -93,7 +102,9 @@ wait_for() { # <seconds> <command...>
 }
 wait_for 120 sh -c "docker logs $P-ldap 2>&1 | grep -q 'slapd starting'" || { echo "slapd did not start"; docker logs "$P-ldap" 2>&1 | tail -5; exit 2; }
 wait_for 60 docker exec "$P-pg" pg_isready -U postgres -h localhost || { echo "postgres did not start"; exit 2; }
-docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE alice LOGIN" -c "CREATE ROLE datawarehouse LOGIN" -c "CREATE ROLE bob LOGIN" >/dev/null || exit 2
+docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE alice LOGIN PASSWORD '$ALICE_PW'" \
+	-c "CREATE ROLE datawarehouse LOGIN PASSWORD '$DW_PW'" -c "CREATE ROLE bob LOGIN PASSWORD '$BOB_PW'" \
+	-c "CREATE ROLE ghost LOGIN PASSWORD '$BOB_PW'" -c "CREATE ROLE carol LOGIN PASSWORD '$CAROL_PW'" >/dev/null || exit 2
 
 # Starts a PgBouncer from the image under test: <name> <bind dn> <bind password> [docker run args].
 bouncer() {
@@ -114,6 +125,11 @@ B=$P-b1
 
 OUT=$(q "$B" alice "$ALICE_PW" require appdb "select current_user")
 check "an LDAP posixAccount user logs in" "$OUT" [ "$OUT" = alice ]
+FILTERS=$(docker logs "$P-ldap" 2>&1 | grep -o 'filter="[^"]*alice[^"]*"' | sort -u | tr '\n' ' ')
+posix_cn_search() { has "$FILTERS" '(objectClass=posixAccount)' && has "$FILTERS" '(cn=alice))'; }
+check "LDAP was searched with the posixAccount filter on cn" "${FILTERS:-no search}" posix_cn_search
+OUT=$(q "$B" carol "$CAROL_PW" require appdb "select current_user")
+check "a user is matched by cn, not uid" "$OUT" [ "$OUT" = carol ]
 OUT=$(q "$B" alice "$ALICE_PW-x" require appdb "select 1")
 check "a wrong password is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" bob "$BOB_PW" require appdb "select 1")
@@ -135,9 +151,14 @@ OUT=$(docker exec -e PGPASSWORD="$MON_PW" "$B" sh -c 'psql -h localhost -p 5432 
 check "RELOAD from inside the container (the Nomad template's change script) works" "$OUT" [ "$OUT" = RELOAD ]
 OUT=$(q "$B" alice "$ALICE_PW" require appdb "select current_user")
 check "and logins still work after it" "$OUT" [ "$OUT" = alice ]
-if docker exec "$B" sh -c 'grep -q "^auth_type = hba" /etc/pgbouncer/pgbouncer0.ini'; then
+# The HBA checks only apply to an image that authenticates through the HBA file.
+HBA=false
+docker exec "$B" sh -c 'grep -Eq "^auth_type *= *hba" /etc/pgbouncer/pgbouncer0.ini' && HBA=true
+if $HBA; then
 	MODE=$(docker exec "$B" sh -c 'stat -c "%a %U" /etc/pgbouncer/pgbouncer_hba.conf')
 	check "the HBA file (it holds the bind password) is 600 and owned by postgres" "$MODE" [ "$MODE" = "600 postgres" ]
+else
+	skip "the HBA file is 600 and owned by postgres (auth_type is not hba)"
 fi
 
 bouncer "$P-b2" "$ODD_BIND_DN" "$ODD_BIND_PW" -e PROCESSES=2 || fail "a second PgBouncer (odd bind password, 2 processes) starts"
@@ -149,14 +170,22 @@ OK=0
 for _ in 1 2 3 4 5 6 7 8; do [ "$(q "$P-b2" alice "$ALICE_PW" require appdb "select 1")" = 1 ] && OK=$((OK + 1)); done
 check "and every login across them succeeds" "$OK/8" [ "$OK" = 8 ]
 
-if docker exec "$B" sh -c 'grep -q "^auth_type = hba" /etc/pgbouncer/pgbouncer0.ini'; then
-	docker run -d --name "$P-b3" --network "$P" -e CERT_CN=x "$IMAGE" >/dev/null
-	wait_for 30 sh -c "[ \"\$(docker inspect -f '{{.State.Running}}' $P-b3)\" = false ]"
-	RC=$(docker inspect -f '{{.State.ExitCode}}' "$P-b3")
-	SAYS=$(docker logs "$P-b3" 2>&1 | grep -c "LDAP_URI is not set")
-	check "without LDAP_URI the container exits non-zero" "rc=$RC" [ "$RC" != 0 ]
-	check "and says why" "$SAYS" [ "$SAYS" != 0 ]
+# Starts a container that must refuse to boot: <name> <case> [docker run args].
+refuses_to_boot() {
+	local name=$1 case=$2 rc says; shift 2
+	docker run -d --name "$name" --network "$P" -e CERT_CN=x "$@" "$IMAGE" >/dev/null
+	wait_for 30 sh -c "[ \"\$(docker inspect -f '{{.State.Running}}' $name)\" = false ]"
+	rc=$(docker inspect -f '{{.State.ExitCode}}' "$name")
+	says=$(docker logs "$name" 2>&1 | grep -c "must be set")
+	check "$case exits non-zero" "rc=$rc" [ "$rc" != 0 ]
+	check "and says why" "$says" [ "$says" != 0 ]
+}
+if $HBA; then
+	refuses_to_boot "$P-b3" "without LDAP_URI the container"
+	refuses_to_boot "$P-b4" "without LDAP_BASE_DN the container" -e LDAP_URI="$P-ldap"
+else
+	skip "the container refuses to boot without LDAP_URI or LDAP_BASE_DN (auth_type is not hba)"
 fi
 
-echo "$PASSED passed, $FAILED failed"
+echo "$PASSED passed, $FAILED failed, $SKIPPED skipped"
 [ "$FAILED" = 0 ]

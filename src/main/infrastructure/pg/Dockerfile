@@ -33,7 +33,7 @@ COPY --from=build /sources/pgbouncer ${PGBOUNCER_BIN}/pgbouncer
 RUN mkdir -p ${PGBOUNCER_CONFIG} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CERTS} \
 	&& ln -s ${PGBOUNCER_BIN}/pgbouncer /usr/bin/pgbouncer \
 	&& (id ${PGBOUNCER_USER} >/dev/null 2>&1 \
-		|| (addgroup -S ${PGBOUNCER_USER} && adduser -S -D -H -G ${PGBOUNCER_USER} ${PGBOUNCER_USER}))
+		|| (addgroup -S -g 70 ${PGBOUNCER_USER} && adduser -S -D -H -u 70 -G ${PGBOUNCER_USER} ${PGBOUNCER_USER}))
 WORKDIR ${PGBOUNCER_BIN}
 
 # Copies the scripts.

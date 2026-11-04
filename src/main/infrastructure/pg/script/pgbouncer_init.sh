@@ -74,11 +74,17 @@ ldap_option() {
 # Generates the HBA file: the rejected users first, so they never reach LDAP, then LDAP
 # search+bind for everyone else. Written here rather than through envsubst, which would
 # blank the $username placeholder of the search filter.
-if [ -z "${LDAP_URI}" ]
+if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
-	echo "LDAP_URI is not set: no user could log in" >&2
+	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
 	exit 1
 fi
+case "${LDAP_URI}" in
+	*://*)
+		echo "LDAP_URI is the LDAP host name, not a URL: ${LDAP_URI}" >&2
+		exit 1
+		;;
+esac
 LDAP_OPTIONS=
 ldap_option ldapserver "${LDAP_URI}"
 ldap_option ldapport "${LDAP_PORT}"
@@ -87,15 +93,19 @@ ldap_option ldapbinddn "${LDAP_USER}"
 ldap_option ldapbindpasswd "${LDAP_PASSWORD:-}"
 ldap_option ldapsearchfilter "${LDAP_SEARCH_FILTER}"
 REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
-{
-	for REJECTED_USER in ${REJECTED_USERS}
-	do
-		echo "local all $(hba_quote "${REJECTED_USER}") reject"
-		echo "host all $(hba_quote "${REJECTED_USER}") all reject"
-	done
-	echo "local all all ldap${LDAP_OPTIONS}"
-	echo "host all all all ldap${LDAP_OPTIONS}"
-} > "${AUTH_HBA_FILE}"
+(
+	# The file holds the bind password: never readable by others, not even briefly.
+	umask 077
+	{
+		for REJECTED_USER in ${REJECTED_USERS}
+		do
+			echo "local all $(hba_quote "${REJECTED_USER}") reject"
+			echo "host all $(hba_quote "${REJECTED_USER}") all reject"
+		done
+		echo "local all all ldap${LDAP_OPTIONS}"
+		echo "host all all all ldap${LDAP_OPTIONS}"
+	} > "${AUTH_HBA_FILE}"
+)
 chmod 600 "${AUTH_HBA_FILE}"
 
 # Replaces variables in the files.

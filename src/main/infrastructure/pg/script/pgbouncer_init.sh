@@ -76,11 +76,31 @@ ldap_escape() {
 	printf '%s' "${1}" | sed 's/\\/\\5c/g; s/\*/\\2a/g; s/(/\\28/g; s/)/\\29/g'
 }
 
+# Refuses a value with a line break: it would end its HBA line and start a rule of its own.
+NEWLINE='
+'
+CARRIAGE_RETURN=$(printf '\r')
+single_line() {
+	case "${2}" in
+		*"${NEWLINE}"*|*"${CARRIAGE_RETURN}"*)
+			echo "${1} must be a single line" >&2
+			exit 1
+			;;
+	esac
+}
+
 # Generates the HBA file: the rejected users first, so they never reach LDAP, then LDAP
 # search+bind for everyone else. The rejected users are also left out of the search, on
-# the attribute the filter matches $username with (cn by default), so another spelling
-# (LDAP matches case-insensitively) finds no entry either. Written here rather than
-# through envsubst, which would blank the $username placeholder of the search filter.
+# every attribute the filter matches $username with, so another spelling (LDAP matches
+# case-insensitively) finds no entry either. Written here rather than through envsubst,
+# which would blank the $username placeholder of the search filter.
+single_line LDAP_URI "${LDAP_URI}"
+single_line LDAP_PORT "${LDAP_PORT}"
+single_line LDAP_BASE_DN "${LDAP_BASE_DN}"
+single_line LDAP_USER "${LDAP_USER}"
+single_line LDAP_PASSWORD "${LDAP_PASSWORD:-}"
+single_line LDAP_SEARCH_FILTER "${LDAP_SEARCH_FILTER}"
+single_line REJECT_USERS "${REJECT_USERS}"
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
@@ -103,13 +123,29 @@ case "${SEARCH_FILTER}" in
 		exit 1
 		;;
 esac
+# libldap takes a bare item (cn=$username), but it cannot be ANDed without parentheses.
+case "${SEARCH_FILTER}" in
+	"("*)
+		;;
+	*)
+		SEARCH_FILTER="(${SEARCH_FILTER})"
+		;;
+esac
 if [ -n "${REJECTED_USERS}" ]
 then
-	LOGIN_ATTRIBUTE=$(printf '%s' "${SEARCH_FILTER}" | sed -n 's/.*(\([A-Za-z][A-Za-z0-9.;-]*\)=\$username).*/\1/p')
+	LOGIN_ATTRIBUTES=$(printf '%s' "${SEARCH_FILTER}" | grep -o '([A-Za-z][A-Za-z0-9.;-]*=\$username)' | sed 's/^(//; s/=.*//' | sort -u)
+	if [ -z "${LOGIN_ATTRIBUTES}" ]
+	then
+		echo "REJECT_USERS needs a filter that matches \$username as (attribute=\$username): ${SEARCH_FILTER}" >&2
+		exit 1
+	fi
 	SEARCH_FILTER="(&${SEARCH_FILTER}"
 	for REJECTED_USER in ${REJECTED_USERS}
 	do
-		SEARCH_FILTER="${SEARCH_FILTER}(!(${LOGIN_ATTRIBUTE:-cn}=$(ldap_escape "${REJECTED_USER}")))"
+		for LOGIN_ATTRIBUTE in ${LOGIN_ATTRIBUTES}
+		do
+			SEARCH_FILTER="${SEARCH_FILTER}(!(${LOGIN_ATTRIBUTE}=$(ldap_escape "${REJECTED_USER}")))"
+		done
 	done
 	SEARCH_FILTER="${SEARCH_FILTER})"
 fi
@@ -149,6 +185,7 @@ fi
 	} > "${AUTH_HBA_FILE}"
 )
 chmod 600 "${AUTH_HBA_FILE}"
+chown "${PGBOUNCER_USER}:${PGBOUNCER_USER}" "${AUTH_HBA_FILE}"
 
 # Replaces variables in the files.
 CONF_FILE=${PGBOUNCER_CONFIG}/pgbouncer.ini

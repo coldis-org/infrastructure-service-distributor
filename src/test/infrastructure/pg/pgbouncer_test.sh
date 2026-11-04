@@ -26,7 +26,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -202,6 +202,17 @@ if $HBA; then
 		-e REJECT_USERS="$(printf 'service-user-%02d,' 1 2 3 4 5 6 7 8 9 10 11 12)"
 	refuses_to_boot "$P-b6" "with a search filter without \$username" "must contain" \
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SEARCH_FILTER="(objectClass=posixAccount)"
+	refuses_to_boot "$P-b8" "with a line break in LDAP_PASSWORD" "must be a single line" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_PASSWORD="$(printf 'x\nhost all all all trust')"
+	refuses_to_boot "$P-b9" "with REJECT_USERS and no (attribute=\$username) to exclude them on" "needs a filter" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e REJECT_USERS=datawarehouse \
+		-e LDAP_SEARCH_FILTER='(mail=$username@test.local)'
+	# A bare filter, as pam_filter was written, still works once the rejected users are ANDed in.
+	bouncer "$P-b7" "$BIND_DN" "$BIND_PW" -e LDAP_SEARCH_FILTER='cn=$username' || fail "a PgBouncer with a bare filter starts"
+	OUT=$(q "$P-b7" alice "$ALICE_PW" require appdb "select current_user")
+	check "a bare filter (cn=\$username without parentheses) with REJECT_USERS still logs in" "$OUT" [ "$OUT" = alice ]
+	OUT=$(q "$P-b7" DataWarehouse "$DW_PW" require appdb "select 1")
+	check "and still leaves the rejected user out in another spelling" "$OUT" [ "$OUT" != 1 ]
 else
 	skip "the container refuses to boot on a missing or unusable LDAP setting (auth_type is not hba)"
 fi

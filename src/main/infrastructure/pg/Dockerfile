@@ -1,51 +1,40 @@
-# From Debian.
-FROM debian:11.10-slim
-ENV DEBIAN_FRONTEND=noninteractive
+# PgBouncer version.
+ARG PGBOUNCER_VERSION=1.26.1
 
-# Installs necessary libs to build pgbouncer.
-RUN	set -x \
-	&& apt-get -y update \
-	&& apt-get install -y openssl ca-certificates gettext libevent-2.1-7 libssl1.1 libpam0g curl gcc pkgconf libevent-dev libssl-dev libpam0g-dev make \
-	&& apt-get purge -y --auto-remove \
-	&& rm -rf /var/lib/apt/lists/*
+# Builds PgBouncer.
+FROM alpine:3.24.3 AS build
+ARG PGBOUNCER_VERSION
+ARG PGBOUNCER_SHA256=00886a2994b4844cd37110970df777772cfc42a74c400522c82fba509a3f42d9
+WORKDIR /sources
+RUN apk add --no-cache build-base c-ares-dev curl libevent-dev openldap-dev openssl-dev pkgconf \
+	&& curl -fsSLo pgbouncer.tar.gz "https://www.pgbouncer.org/downloads/files/${PGBOUNCER_VERSION}/pgbouncer-${PGBOUNCER_VERSION}.tar.gz" \
+	&& echo "${PGBOUNCER_SHA256}  pgbouncer.tar.gz" | sha256sum -c - \
+	&& tar -xzf pgbouncer.tar.gz --strip-components 1 \
+	&& ./configure --prefix=/usr --with-cares --with-ldap \
+	&& make -j"$(nproc)" pgbouncer
+
+# From Alpine.
+FROM alpine:3.24.3
+ARG PGBOUNCER_VERSION
+
+# Installs the runtime libraries, openssl (self-signed certificate), envsubst and the
+# PostgreSQL client (used to RELOAD the admin console).
+RUN apk add --no-cache c-ares ca-certificates gettext-envsubst libevent libldap openssl postgresql18-client
 
 # Installs PG bouncer.
-ENV PGBOUNCER_VERSION=1.24.1 \
+ENV PGBOUNCER_VERSION=${PGBOUNCER_VERSION} \
 	PGBOUNCER_BIN=/opt/pgbouncer \
 	PGBOUNCER_CONFIG=/etc/pgbouncer \
 	PGBOUNCER_LOGS=/var/log/pgbouncer \
 	PGBOUNCER_SOCKET=/var/pgbouncer/socket \
 	PGBOUNCER_CERTS=/etc/ssl/certs \
-	PGBOUNCER_USER=postgres 
-RUN mkdir -p ${PGBOUNCER_BIN} && \
-	mkdir -p ${PGBOUNCER_CONFIG} && \
-	mkdir -p ${PGBOUNCER_LOGS} && \
-	mkdir -p ${PGBOUNCER_SOCKET} && \
-	mkdir -p ${PGBOUNCER_CERTS} && \
-	cd ${PGBOUNCER_BIN} && \
-	curl -Lso  "${PGBOUNCER_BIN}/pgbouncer.tar.gz" "https://pgbouncer.github.io/downloads/files/${PGBOUNCER_VERSION}/pgbouncer-${PGBOUNCER_VERSION}.tar.gz"  && \
-	tar -zxvf pgbouncer.tar.gz -C ${PGBOUNCER_BIN} --strip-components 1 && \
-	rm ${PGBOUNCER_BIN}/pgbouncer.tar.gz
+	PGBOUNCER_USER=postgres
+COPY --from=build /sources/pgbouncer ${PGBOUNCER_BIN}/pgbouncer
+RUN mkdir -p ${PGBOUNCER_CONFIG} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CERTS} \
+	&& ln -s ${PGBOUNCER_BIN}/pgbouncer /usr/bin/pgbouncer \
+	&& (id ${PGBOUNCER_USER} >/dev/null 2>&1 \
+		|| (addgroup -S ${PGBOUNCER_USER} && adduser -S -D -H -G ${PGBOUNCER_USER} ${PGBOUNCER_USER}))
 WORKDIR ${PGBOUNCER_BIN}
-
-RUN	adduser ${PGBOUNCER_USER} && \
-	./configure --prefix=/usr --with-pam && \
-	make && \
-	make install
-
-# Removes tools used for building pgbouncer.
-RUN	set -x \
-	&& apt-get remove -y curl gcc pkgconf libevent-dev libssl-dev make \
-	&& apt-get purge -y --auto-remove \
-	&& rm -rf /var/lib/apt/lists/*
-
-# Installs LDAP integration and PostgreSQL Client.
-RUN	set -x \
-	&& apt-get -y update \
-	&& apt-get install -y libpam-ldap \
-	&& apt-get install -y postgresql-client \
-	&& apt-get purge -y --auto-remove \
-	&& rm -rf /var/lib/apt/lists/*
 
 # Copies the scripts.
 RUN mkdir -p /opt/pgbouncer-script
@@ -62,10 +51,10 @@ COPY config/pgbouncer.ini /etc/pgbouncer/
 RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CONFIG} ${PGBOUNCER_BIN} && \
 	chmod -R 755 ${PGBOUNCER_LOGS}
 
-# Copies the LDAP files.
-COPY config/pam_ldap.conf /etc
-
 # Env.
+# LDAP (search+bind): LDAP_URI is the server host, LDAP_USER the bind DN and LDAP_PASSWORD
+# (no default) its password. $username in LDAP_SEARCH_FILTER is replaced by PgBouncer.
+# REJECT_USERS (separated by ',' or ':') are refused before any LDAP round trip.
 ENV MIN_POOL_SIZE=7\
 	DEFAULT_POOL_SIZE=73\
 	RESERVE_POOL_SIZE=5\
@@ -73,8 +62,14 @@ ENV MIN_POOL_SIZE=7\
 	MAX_DB_CONNECTIONS=93\
 	MAX_CLIENT_CONN=739\
 	POOL_MODE=session\
-	PROCESSES=1
+	PROCESSES=1\
+	LDAP_URI=\
+	LDAP_PORT=389\
+	LDAP_BASE_DN=\
+	LDAP_USER=\
+	LDAP_SEARCH_FILTER="(&(objectClass=posixAccount)(cn=\$username))"\
+	REJECT_USERS=\
+	AUTH_HBA_FILE=/etc/pgbouncer/pgbouncer_hba.conf
 
 # Entrypoint.
 ENTRYPOINT [ "pgbouncer_init" ]
-

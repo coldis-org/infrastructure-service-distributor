@@ -6,10 +6,8 @@ set -o errexit
 
 # Default paramterers.
 DEBUG=false
-DEBUG_OPT=
 PGBOUNCER_PARAMETERS=
 PGBOUNCER_CERTS=/etc/ssl/certs
-CERT_FILE_PREFIX=coldis
 CERT_INFO="/C=${CERT_C}/ST=${CERT_ST}/L=${CERT_L}/O=${CERT_O}/OU=${CERT_OU}/CN=${CERT_CN}"
 RESET=${RESET:=false} 
 
@@ -20,7 +18,6 @@ while :; do
 		# Debug argument.
 		--debug)
 			DEBUG=true
-			DEBUG_OPT="--debug"
 			;;
 
 		# Other option.
@@ -60,10 +57,48 @@ then
 
 fi
 
+# Quotes an HBA value: wraps it in double quotes and doubles any double quote inside.
+hba_quote() {
+	printf '"%s"' "$(printf '%s' "${1}" | sed 's/"/""/g')"
+}
+
+# Appends an LDAP option when it has a value (an empty quoted value stops PgBouncer from
+# reading the options after it).
+ldap_option() {
+	if [ -n "${2}" ]
+	then
+		LDAP_OPTIONS="${LDAP_OPTIONS} ${1}=$(hba_quote "${2}")"
+	fi
+}
+
+# Generates the HBA file: the rejected users first, so they never reach LDAP, then LDAP
+# search+bind for everyone else. Written here rather than through envsubst, which would
+# blank the $username placeholder of the search filter.
+if [ -z "${LDAP_URI}" ]
+then
+	echo "LDAP_URI is not set: no user could log in" >&2
+	exit 1
+fi
+LDAP_OPTIONS=
+ldap_option ldapserver "${LDAP_URI}"
+ldap_option ldapport "${LDAP_PORT}"
+ldap_option ldapbasedn "${LDAP_BASE_DN}"
+ldap_option ldapbinddn "${LDAP_USER}"
+ldap_option ldapbindpasswd "${LDAP_PASSWORD:-}"
+ldap_option ldapsearchfilter "${LDAP_SEARCH_FILTER}"
+REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
+{
+	for REJECTED_USER in ${REJECTED_USERS}
+	do
+		echo "local all $(hba_quote "${REJECTED_USER}") reject"
+		echo "host all $(hba_quote "${REJECTED_USER}") all reject"
+	done
+	echo "local all all ldap${LDAP_OPTIONS}"
+	echo "host all all all ldap${LDAP_OPTIONS}"
+} > "${AUTH_HBA_FILE}"
+chmod 600 "${AUTH_HBA_FILE}"
+
 # Replaces variables in the files.
-LDAP_CONF_FILE=/etc/pam_ldap.conf
-LDAP_CONF=$(envsubst < ${LDAP_CONF_FILE})
-echo "${LDAP_CONF}" > ${LDAP_CONF_FILE}
 CONF_FILE=${PGBOUNCER_CONFIG}/pgbouncer.ini
 CONF=$(envsubst < ${CONF_FILE})
 echo "${CONF}" > ${CONF_FILE}
@@ -82,7 +117,6 @@ done
 # Enforces permissions.
 chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_LOGS} ${PGBOUNCER_SOCKET} ${PGBOUNCER_CONFIG} ${PGBOUNCER_BIN} && \
 	chmod -R 755 ${PGBOUNCER_LOGS}
-su postgres
 
 # Runs alternative processes.
 CURRENT_PROCESS=1

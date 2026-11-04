@@ -79,9 +79,11 @@ Run it on any change to the `pg` image, and record the result the same way.
   `CURRENT_PROCESS` replaced in each copy.
 - **pgbouncer authentication is an HBA file `pgbouncer_init` writes, not a template.** It is
   built from `LDAP_URI`, `LDAP_PORT`, `LDAP_BASE_DN`, `LDAP_USER` (bind DN), `LDAP_PASSWORD`,
-  `LDAP_SEARCH_FILTER` and `REJECT_USERS` (refused before any LDAP round trip), because envsubst
-  would blank the filter's `$username`. It holds the bind password, so it is mode 600; without
-  `LDAP_URI` (a host name, not a URL) or `LDAP_BASE_DN` the container exits.
+  `LDAP_SEARCH_FILTER` and `REJECT_USERS` (refused before any LDAP round trip, and also left out
+  of the search filter so another spelling finds no entry), because envsubst would blank the
+  filter's `$username`. It holds the bind password, so it is mode 600; without `LDAP_URI` (a
+  host name, not a URL) or `LDAP_BASE_DN`, or with options over PgBouncer's 1024-byte limit,
+  the container exits.
 
 ## Conventions
 

@@ -46,12 +46,14 @@ ODD_BIND_PW="$(rand) \"q\"#, x"
 ALICE_PW=$(rand)
 BOB_PW=$(rand)
 CAROL_PW=$(rand)
+EVE_PW=$(rand)
 DW_PW=$(rand)
 MON_PW=$(rand)
 
 # Directory: posix users alice, datawarehouse, database.monitor and carol (whose uid is not her
-# cn, so only a cn match lets her in); bob has a uid but no posixAccount. Only a bound user
-# can search, so a lost bind DN or password fails the logins.
+# cn, so only a cn match lets her in); eve is blocked the way service-auth blocks a user
+# (businessCategory=BLOCKED); bob has a uid but no posixAccount. Only a bound user can
+# search, so a lost bind DN or password fails the logins.
 posix_user() { # <cn> <uid number> <password> [uid]
 	printf 'dn: cn=%s,ou=people,%s\nobjectClass: inetOrgPerson\nobjectClass: posixAccount\n' "$1" "$BASE_DN"
 	printf 'cn: %s\nsn: %s\nuid: %s\nuidNumber: %s\ngidNumber: %s\nhomeDirectory: /home/%s\nuserPassword: %s\n\n' \
@@ -67,6 +69,7 @@ posix_user() { # <cn> <uid number> <password> [uid]
 	posix_user datawarehouse 10002 "$DW_PW"
 	posix_user database.monitor 10003 "$MON_PW"
 	posix_user carol 10004 "$CAROL_PW" c.arol
+	posix_user eve 10005 "$EVE_PW" | sed 's/^uid: eve$/uid: eve\nbusinessCategory: BLOCKED/'
 	printf 'dn: cn=bob,ou=people,%s\nobjectClass: inetOrgPerson\ncn: bob\nsn: bob\nuid: bob\nuserPassword: %s\n\n' "$BASE_DN" "$BOB_PW"
 } > "$TMP/seed.ldif"
 cat > "$TMP/slapd.conf" <<EOF
@@ -104,7 +107,8 @@ wait_for 120 sh -c "docker logs $P-ldap 2>&1 | grep -q 'slapd starting'" || { ec
 wait_for 60 docker exec "$P-pg" pg_isready -U postgres -h localhost || { echo "postgres did not start"; exit 2; }
 docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE alice LOGIN PASSWORD '$ALICE_PW'" \
 	-c "CREATE ROLE datawarehouse LOGIN PASSWORD '$DW_PW'" -c "CREATE ROLE bob LOGIN PASSWORD '$BOB_PW'" \
-	-c "CREATE ROLE ghost LOGIN PASSWORD '$BOB_PW'" -c "CREATE ROLE carol LOGIN PASSWORD '$CAROL_PW'" >/dev/null || exit 2
+	-c "CREATE ROLE ghost LOGIN PASSWORD '$BOB_PW'" -c "CREATE ROLE carol LOGIN PASSWORD '$CAROL_PW'" \
+	-c "CREATE ROLE eve LOGIN PASSWORD '$EVE_PW'" -c "CREATE ROLE \"DataWarehouse\" LOGIN PASSWORD '$DW_PW'" >/dev/null || exit 2
 
 # Starts a PgBouncer from the image under test: <name> <bind dn> <bind password> [docker run args].
 bouncer() {
@@ -120,13 +124,16 @@ bouncer() {
 # psql through a bouncer: <bouncer> <user> <password> <sslmode> <database> <sql>.
 q() { docker exec -e PGPASSWORD="$3" -e PGSSLMODE="$4" -e PGCONNECT_TIMEOUT=10 "$P-client" psql -h "$1" -U "$2" -d "$5" -tAc "$6" 2>&1; }
 
-bouncer "$P-b1" "$BIND_DN" "$BIND_PW" || { echo "PgBouncer did not start"; docker logs "$P-b1" 2>&1 | tail -20; exit 2; }
+# The first PgBouncer runs the production filter, which also refuses users service-auth
+# blocked; the second one the image default.
+PROD_FILTER='(&(objectClass=posixAccount)(cn=$username)(!(businessCategory=BLOCKED)))'
+bouncer "$P-b1" "$BIND_DN" "$BIND_PW" -e LDAP_SEARCH_FILTER="$PROD_FILTER" || { echo "PgBouncer did not start"; docker logs "$P-b1" 2>&1 | tail -20; exit 2; }
 B=$P-b1
 
 OUT=$(q "$B" alice "$ALICE_PW" require appdb "select current_user")
 check "an LDAP posixAccount user logs in" "$OUT" [ "$OUT" = alice ]
 FILTERS=$(docker logs "$P-ldap" 2>&1 | grep -o 'filter="[^"]*alice[^"]*"' | sort -u | tr '\n' ' ')
-posix_cn_search() { has "$FILTERS" '(objectClass=posixAccount)' && has "$FILTERS" '(cn=alice))'; }
+posix_cn_search() { has "$FILTERS" '(objectClass=posixAccount)' && has "$FILTERS" '(cn=alice)'; }
 check "LDAP was searched with the posixAccount filter on cn" "${FILTERS:-no search}" posix_cn_search
 OUT=$(q "$B" carol "$CAROL_PW" require appdb "select current_user")
 check "a user is matched by cn, not uid" "$OUT" [ "$OUT" = carol ]
@@ -138,8 +145,14 @@ OUT=$(q "$B" ghost "$BOB_PW" require appdb "select 1")
 check "a user missing from LDAP is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" datawarehouse "$DW_PW" require appdb "select 1")
 check "a rejected user is refused even with the right password" "$OUT" [ "$OUT" != 1 ]
-ASKED=$(docker logs "$P-ldap" 2>&1 | grep -c "cn=datawarehouse)")
+# A search for datawarehouse would match (cn=datawarehouse); the (!(cn=datawarehouse)) every
+# search now carries does not count.
+ASKED=$(docker logs "$P-ldap" 2>&1 | grep -o 'filter="[^"]*"' | sed 's/(!(cn=datawarehouse))//g' | grep -c "cn=datawarehouse")
 check "and LDAP is never asked about it" "$ASKED searches" [ "$ASKED" = 0 ]
+OUT=$(q "$B" DataWarehouse "$DW_PW" require appdb "select 1")
+check "another spelling of a rejected user is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
+OUT=$(q "$B" eve "$EVE_PW" require appdb "select 1")
+check "a user blocked in service-auth (businessCategory=BLOCKED) is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" alice "$ALICE_PW" disable appdb "select 1")
 check "a client without TLS is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" database.monitor "$MON_PW" require pgbouncer "show version")

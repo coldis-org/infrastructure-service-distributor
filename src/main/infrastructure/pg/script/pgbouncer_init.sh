@@ -71,9 +71,16 @@ ldap_option() {
 	fi
 }
 
+# Escapes an LDAP filter value (RFC 4515).
+ldap_escape() {
+	printf '%s' "${1}" | sed 's/\\/\\5c/g; s/\*/\\2a/g; s/(/\\28/g; s/)/\\29/g'
+}
+
 # Generates the HBA file: the rejected users first, so they never reach LDAP, then LDAP
-# search+bind for everyone else. Written here rather than through envsubst, which would
-# blank the $username placeholder of the search filter.
+# search+bind for everyone else. The rejected users are also left out of the search, on
+# the attribute the filter matches $username with (cn by default), so another spelling
+# (LDAP matches case-insensitively) finds no entry either. Written here rather than
+# through envsubst, which would blank the $username placeholder of the search filter.
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
@@ -85,14 +92,31 @@ case "${LDAP_URI}" in
 		exit 1
 		;;
 esac
+REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
+SEARCH_FILTER=${LDAP_SEARCH_FILTER}
+if [ -n "${REJECTED_USERS}" ]
+then
+	LOGIN_ATTRIBUTE=$(printf '%s' "${LDAP_SEARCH_FILTER}" | sed -n 's/.*(\([A-Za-z][A-Za-z0-9.;-]*\)=\$username).*/\1/p')
+	SEARCH_FILTER="(&${LDAP_SEARCH_FILTER}"
+	for REJECTED_USER in ${REJECTED_USERS}
+	do
+		SEARCH_FILTER="${SEARCH_FILTER}(!(${LOGIN_ATTRIBUTE:-cn}=$(ldap_escape "${REJECTED_USER}")))"
+	done
+	SEARCH_FILTER="${SEARCH_FILTER})"
+fi
 LDAP_OPTIONS=
 ldap_option ldapserver "${LDAP_URI}"
 ldap_option ldapport "${LDAP_PORT}"
 ldap_option ldapbasedn "${LDAP_BASE_DN}"
 ldap_option ldapbinddn "${LDAP_USER}"
 ldap_option ldapbindpasswd "${LDAP_PASSWORD:-}"
-ldap_option ldapsearchfilter "${LDAP_SEARCH_FILTER}"
-REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
+ldap_option ldapsearchfilter "${SEARCH_FILTER}"
+# PgBouncer refuses every LDAP login when its options pass MAX_LDAP_CONFIG (1024 bytes).
+if [ "${#LDAP_OPTIONS}" -ge 1024 ]
+then
+	echo "The LDAP options are ${#LDAP_OPTIONS} characters, too long for PgBouncer (fewer REJECT_USERS?)" >&2
+	exit 1
+fi
 (
 	# The file holds the bind password: never readable by others, not even briefly.
 	umask 077

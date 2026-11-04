@@ -54,7 +54,8 @@ RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_
 # Env.
 # LDAP (search+bind): LDAP_URI is the server host, LDAP_USER the bind DN and LDAP_PASSWORD
 # (no default) its password. $username in LDAP_SEARCH_FILTER is replaced by PgBouncer.
-# REJECT_USERS (separated by ',' or ':') are refused before any LDAP round trip.
+# REJECT_USERS (separated by ',' or ':') are refused before any LDAP round trip, and left
+# out of the search so another spelling finds no entry either.
 ENV MIN_POOL_SIZE=7\
 	DEFAULT_POOL_SIZE=73\
 	RESERVE_POOL_SIZE=5\

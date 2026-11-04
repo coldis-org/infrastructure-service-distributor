@@ -12,7 +12,7 @@ FROM nginx:${NGINX_VERSION} as build
 WORKDIR /sources
 
 # Mod security.
-ARG MODSEC_VERSION=3.0.14
+ARG MODSEC_VERSION=3.0.17
 RUN apt-get update \
 	&& apt-get install -y --no-install-recommends \
 		automake \
@@ -45,7 +45,7 @@ RUN apt-get update \
 	&& make install
 	
 # VTS.
-ARG VTS_VERSION=0.2.4
+ARG VTS_VERSION=0.2.7
 RUN wget --quiet https://github.com/vozlt/nginx-module-vts/archive/refs/tags/v${VTS_VERSION}.tar.gz \
 	&& tar -xvzf v${VTS_VERSION}.tar.gz \
 	&& rm v${VTS_VERSION}.tar.gz \

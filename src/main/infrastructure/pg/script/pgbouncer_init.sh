@@ -208,7 +208,9 @@ ldap_option ldapbasedn "${LDAP_BASE_DN}"
 ldap_option ldapbinddn "${LDAP_USER}"
 ldap_option ldapbindpasswd "${LDAP_PASSWORD:-}"
 ldap_option ldapsearchfilter "${SEARCH_FILTER}"
-# PgBouncer refuses every LDAP login when its options pass MAX_LDAP_CONFIG (1024 bytes).
+# PgBouncer silently cuts the options to MAX_LDAP_CONFIG - 1 (1023) bytes and parses the rest:
+# a cut filter fails every login, but a dropped one falls back to (uid=$username) without the
+# BLOCKED and REJECT_USERS clauses. This check is what keeps that from happening.
 if [ "${#LDAP_OPTIONS}" -ge 1024 ]
 then
 	echo "The LDAP options are ${#LDAP_OPTIONS} characters, too long for PgBouncer (fewer REJECT_USERS?)" >&2

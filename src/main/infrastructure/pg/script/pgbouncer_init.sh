@@ -119,6 +119,17 @@ case "${LDAP_TLS:-}" in
 		exit 1
 		;;
 esac
+# Two combinations that boot but leave no way to log in.
+if [ "${LDAP_SCHEME:-}" = ldaps ] && [ "${LDAP_TLS:-}" = 1 ]
+then
+	echo "LDAP_SCHEME=ldaps is already TLS: leave LDAP_TLS (StartTLS) unset" >&2
+	exit 1
+fi
+if [ "${LDAP_SCHEME:-}" = ldaps ] && [ "${LDAP_PORT}" = 389 ]
+then
+	echo "LDAP_SCHEME=ldaps needs the ldaps port (usually LDAP_PORT=636), not 389" >&2
+	exit 1
+fi
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2

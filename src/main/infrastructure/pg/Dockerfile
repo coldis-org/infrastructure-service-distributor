@@ -53,7 +53,8 @@ RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_
 
 # Env.
 # LDAP (search+bind): LDAP_URI is the server host, LDAP_USER the bind DN and LDAP_PASSWORD
-# (no default) its password. $username in LDAP_SEARCH_FILTER is replaced by PgBouncer.
+# (no default) its password. $username in LDAP_SEARCH_FILTER is replaced by PgBouncer; the
+# default also refuses entries blocked in service-auth (businessCategory=BLOCKED).
 # REJECT_USERS (separated by ',' or ':') are refused before any LDAP round trip, and left
 # out of the search so another spelling finds no entry either. LDAP_SCHEME=ldaps (with
 # LDAP_PORT=636) or LDAP_TLS=1 (StartTLS) encrypt the LDAP connection; the server
@@ -72,7 +73,7 @@ ENV MIN_POOL_SIZE=7\
 	LDAP_TLS=\
 	LDAP_BASE_DN=\
 	LDAP_USER=\
-	LDAP_SEARCH_FILTER="(&(objectClass=posixAccount)(cn=\$username))"\
+	LDAP_SEARCH_FILTER="(&(objectClass=posixAccount)(cn=\$username)(!(businessCategory=BLOCKED)))"\
 	REJECT_USERS=\
 	AUTH_HBA_FILE=/etc/pgbouncer/pgbouncer_hba.conf
 

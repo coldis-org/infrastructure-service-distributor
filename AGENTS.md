@@ -96,6 +96,9 @@ Run it on any change to the `pg` image, and record the result the same way.
 - Tunables are environment variables with a default in the Dockerfile `ENV` block, rendered into
   the config files at boot; schedules are environment variables too.
 - Cron tables live in `cron/`, are copied to `/etc/cron.d` and installed with `crontab`.
+- OS packages are not version-pinned: the base image tag pins the distribution release
+  (`apt-get`/`apk add` take that release's fixes). Upstream sources built here are pinned and
+  checksum-verified (`*_VERSION` + `*_SHA256`).
 
 ## Workspace
 

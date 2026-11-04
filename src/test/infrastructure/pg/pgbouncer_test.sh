@@ -11,13 +11,17 @@
 #   docker build -t distributor-pg-test src/main/infrastructure/pg
 #   src/test/infrastructure/pg/pgbouncer_test.sh distributor-pg-test
 #
-# EXPECT_VERSION=1.26.1 also checks the version the admin console reports. Passwords are
+# EXPECT_VERSION=1.26.1 also checks the version the admin console reports; EXPECT_HBA=false
+# runs it against a PAM image, skipping the HBA-only checks. Passwords are
 # generated per run. Needs network access once, to install slapd and pull postgres.
 # Exits non-zero when any test fails.
 
 set -u
 IMAGE=${1:?usage: pgbouncer_test.sh <image>}
 EXPECT_VERSION=${EXPECT_VERSION:-}
+# The HBA-only checks are expected to run; EXPECT_HBA=false (a run against the PAM image)
+# is the only way to skip them.
+EXPECT_HBA=${EXPECT_HBA:-true}
 ALPINE=alpine:3.24.3
 POSTGRES=postgres:18.6-alpine3.24
 P=pgbtest-$$
@@ -26,7 +30,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" "$P-b14" "$P-b15" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -122,7 +126,8 @@ wait_for 60 docker exec "$P-pg" pg_isready -U postgres -h localhost || { echo "p
 docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE alice LOGIN PASSWORD '$ALICE_PW'" \
 	-c "CREATE ROLE datawarehouse LOGIN PASSWORD '$DW_PW'" -c "CREATE ROLE bob LOGIN PASSWORD '$BOB_PW'" \
 	-c "CREATE ROLE ghost LOGIN PASSWORD '$BOB_PW'" -c "CREATE ROLE carol LOGIN PASSWORD '$CAROL_PW'" \
-	-c "CREATE ROLE eve LOGIN PASSWORD '$EVE_PW'" -c "CREATE ROLE \"DataWarehouse\" LOGIN PASSWORD '$DW_PW'" >/dev/null || exit 2
+	-c "CREATE ROLE eve LOGIN PASSWORD '$EVE_PW'" -c "CREATE ROLE \"DataWarehouse\" LOGIN PASSWORD '$DW_PW'" \
+	-c "CREATE ROLE \"al*\" LOGIN PASSWORD '$ALICE_PW'" >/dev/null || exit 2
 
 # Starts a PgBouncer from the image under test: <name> <bind dn> <bind password> [docker run args].
 bouncer() {
@@ -139,8 +144,8 @@ bouncer() {
 # psql through a bouncer: <bouncer> <user> <password> <sslmode> <database> <sql>.
 q() { docker exec -e PGPASSWORD="$3" -e PGSSLMODE="$4" -e PGCONNECT_TIMEOUT=10 "$P-client" psql -h "$1" -U "$2" -d "$5" -tAc "$6" 2>&1; }
 
-# The first PgBouncer runs the production filter, which also refuses users service-auth
-# blocked; the second one the image default.
+# The first PgBouncer sets the filter explicitly, as a deployment may; the second one runs
+# the image default. Both refuse users service-auth blocked.
 PROD_FILTER='(&(objectClass=posixAccount)(cn=$username)(!(businessCategory=BLOCKED)))'
 bouncer "$P-b1" "$BIND_DN" "$BIND_PW" -e LDAP_SEARCH_FILTER="$PROD_FILTER" || { echo "PgBouncer did not start"; docker logs "$P-b1" 2>&1 | tail -20; exit 2; }
 B=$P-b1
@@ -168,6 +173,9 @@ OUT=$(q "$B" DataWarehouse "$DW_PW" require appdb "select 1")
 check "another spelling of a rejected user is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" eve "$EVE_PW" require appdb "select 1")
 check "a user blocked in service-auth (businessCategory=BLOCKED) is refused" "$OUT" [ "$OUT" != 1 ]
+# "al*" would make (cn=al*) find alice; PgBouncer must refuse the name before searching.
+OUT=$(q "$B" 'al*' "$ALICE_PW" require appdb "select 1")
+check "a user name with filter characters (al*) is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" alice "$ALICE_PW" disable appdb "select 1")
 check "a client without TLS is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" database.monitor "$MON_PW" require pgbouncer "show version")
@@ -181,17 +189,22 @@ OUT=$(q "$B" alice "$ALICE_PW" require appdb "select current_user")
 check "and logins still work after it" "$OUT" [ "$OUT" = alice ]
 # The HBA checks only apply to an image that authenticates through the HBA file.
 HBA=false
-docker exec "$B" sh -c 'grep -Eq "^auth_type *= *hba" /etc/pgbouncer/pgbouncer0.ini' && HBA=true
+docker exec "$B" sh -c 'grep -Eq "^auth_type[[:space:]]*=[[:space:]]*hba" /etc/pgbouncer/pgbouncer0.ini' && HBA=true
+if [ "$EXPECT_HBA" = true ] && ! $HBA; then
+	fail "the image authenticates through the HBA file (auth_type = hba)" "set EXPECT_HBA=false for a PAM image"
+fi
 if $HBA; then
 	MODE=$(docker exec "$B" sh -c 'stat -c "%a %U" /etc/pgbouncer/pgbouncer_hba.conf')
 	check "the HBA file (it holds the bind password) is 600 and owned by postgres" "$MODE" [ "$MODE" = "600 postgres" ]
 else
-	skip "the HBA file is 600 and owned by postgres (auth_type is not hba)"
+	skip "the HBA file is 600 and owned by postgres (EXPECT_HBA=false)"
 fi
 
 bouncer "$P-b2" "$ODD_BIND_DN" "$ODD_BIND_PW" -e PROCESSES=2 || fail "a second PgBouncer (odd bind password, 2 processes) starts"
 OUT=$(q "$P-b2" alice "$ALICE_PW" require appdb "select current_user")
 check "a bind password with quotes, a hash, a comma and spaces works" "$OUT" [ "$OUT" = alice ]
+OUT=$(q "$P-b2" eve "$EVE_PW" require appdb "select 1")
+check "the image default filter also refuses a user blocked in service-auth" "$OUT" [ "$OUT" != 1 ]
 N=$(docker exec "$P-b2" sh -c 'cat /proc/[0-9]*/comm 2>/dev/null | grep -cx pgbouncer')
 check "PROCESSES=2 runs two PgBouncer processes" "$N" [ "$N" = 2 ]
 OK=0
@@ -243,8 +256,12 @@ if $HBA; then
 	check "ldaps without the server's CA is refused (the certificate is verified)" "$OUT" [ "$OUT" != 1 ]
 	refuses_to_boot "$P-b13" "with LDAP_TLS=yes" "LDAP_TLS must be 0 or 1" \
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_TLS=yes
+	refuses_to_boot "$P-b14" "with LDAP_SCHEME=ldaps on port 389" "needs the ldaps port" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SCHEME=ldaps
+	refuses_to_boot "$P-b15" "with LDAP_SCHEME=ldaps and LDAP_TLS=1" "already TLS" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SCHEME=ldaps -e LDAP_PORT=636 -e LDAP_TLS=1
 else
-	skip "the container refuses to boot on a missing or unusable LDAP setting (auth_type is not hba)"
+	skip "the boot refusals, the bare filter and the LDAP TLS checks (EXPECT_HBA=false)"
 fi
 
 echo "$PASSED passed, $FAILED failed, $SKIPPED skipped"

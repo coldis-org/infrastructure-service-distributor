@@ -12,3 +12,4 @@ tracked elsewhere, or found not to be a bug.
 - `web/Dockerfile` copies `static/`, which does not exist in the repository: the `web` image cannot build from a clean checkout.
 - Several Dockerfiles clean `/var/lib/apt-get/lists` (the real path is `/var/lib/apt/lists`).
 - Old upstream bases: `haproxy:2.3.7`, `httpd:2.4.48-buster`, `debian:11.10-slim`.
+- Booting the `nginx` image (2026-11-04, master 490933e) logs `[emerg] io_setup() failed (11: Resource temporarily unavailable)` once per worker on a host with spare AIO contexts (`fs.aio-nr=0` of 65536); nginx still serves. `worker_processes ${PROCESSES}` is sized from the CPU count (with the non-production multiplier) and file AIO is set up per worker.

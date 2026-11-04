@@ -36,6 +36,17 @@ docker build src/main/infrastructure/<nginx-config|layer4|pg>
 `web` does not build from a clean checkout: its Dockerfile copies `static/`, which is not in the
 repository.
 
+The threat-blocklist test runs inside a built `nginx` image, against the script and conf.d files it
+installs (needs network once, for openssl):
+
+```bash
+docker run --rm --entrypoint bash -v "$PWD/src/test/infrastructure/nginx:/test:ro" \
+  coldis/infrastructure-service-distributor-nginx:<tag> /test/threat_blocklist_test.sh
+```
+
+Run it on any change to `nginx_update_threat_blocklist` or the `threat-blocklist*` files, and record
+the result in the local check (`tests=<passed>/<run>`).
+
 ## Gotchas
 
 - **Config is rendered at boot with `envsubst` over every environment variable.**

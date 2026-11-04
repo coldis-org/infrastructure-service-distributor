@@ -141,7 +141,7 @@ case "${LDAP_URI}" in
 		exit 1
 		;;
 esac
-REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
+REJECTED_USERS=$(printf '%s' "${REJECT_USERS}" | tr ',:' '  ')
 # PgBouncer's own default when no filter is given.
 SEARCH_FILTER=${LDAP_SEARCH_FILTER:-(uid=\$username)}
 case "${SEARCH_FILTER}" in
@@ -211,15 +211,17 @@ fi
 	{
 		for REJECTED_USER in ${REJECTED_USERS}
 		do
-			echo "local all $(hba_quote "${REJECTED_USER}") reject"
-			echo "host all $(hba_quote "${REJECTED_USER}") all reject"
+			printf '%s\n' "local all $(hba_quote "${REJECTED_USER}") reject"
+			printf '%s\n' "host all $(hba_quote "${REJECTED_USER}") all reject"
 		done
-		echo "local all all ldap${LDAP_OPTIONS}"
-		echo "host all all all ldap${LDAP_OPTIONS}"
+		printf '%s\n' "local all all ldap${LDAP_OPTIONS}"
+		printf '%s\n' "host all all all ldap${LDAP_OPTIONS}"
 	} > "${AUTH_HBA_FILE}"
 )
 chmod 600 "${AUTH_HBA_FILE}"
 chown "${PGBOUNCER_USER}:${PGBOUNCER_USER}" "${AUTH_HBA_FILE}"
+# The HBA file has it now; the PgBouncer processes need not inherit it.
+unset LDAP_PASSWORD
 
 # Replaces variables in the files.
 CONF_FILE=${PGBOUNCER_CONFIG}/pgbouncer.ini

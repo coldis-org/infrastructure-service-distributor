@@ -46,7 +46,7 @@ BASE_DN="dc=test,dc=local"
 BIND_DN="cn=reader,ou=services,$BASE_DN"
 BIND_PW=$(rand)
 ODD_BIND_DN="cn=reader2,ou=services,$BASE_DN"
-ODD_BIND_PW="$(rand) \"q\"#, x"
+ODD_BIND_PW="$(rand) \"q\"#, x\\c\\"
 ALICE_PW=$(rand)
 BOB_PW=$(rand)
 CAROL_PW=$(rand)
@@ -176,6 +176,9 @@ check "a user blocked in service-auth (businessCategory=BLOCKED) is refused" "$O
 # "al*" would make (cn=al*) find alice; PgBouncer must refuse the name before searching.
 OUT=$(q "$B" 'al*' "$ALICE_PW" require appdb "select 1")
 check "a user name with filter characters (al*) is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
+# "eve)(|(cn=eve" would OR away the BLOCKED clause and let eve in.
+OUT=$(q "$B" 'eve)(|(cn=eve' "$EVE_PW" require appdb "select 1")
+check "a user name that reshapes the filter (eve)(|(cn=eve) is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" alice "$ALICE_PW" disable appdb "select 1")
 check "a client without TLS is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" database.monitor "$MON_PW" require pgbouncer "show version")
@@ -202,7 +205,7 @@ fi
 
 bouncer "$P-b2" "$ODD_BIND_DN" "$ODD_BIND_PW" -e PROCESSES=2 || fail "a second PgBouncer (odd bind password, 2 processes) starts"
 OUT=$(q "$P-b2" alice "$ALICE_PW" require appdb "select current_user")
-check "a bind password with quotes, a hash, a comma and spaces works" "$OUT" [ "$OUT" = alice ]
+check "a bind password with quotes, a hash, a comma, spaces and backslashes works" "$OUT" [ "$OUT" = alice ]
 OUT=$(q "$P-b2" eve "$EVE_PW" require appdb "select 1")
 check "the image default filter also refuses a user blocked in service-auth" "$OUT" [ "$OUT" != 1 ]
 N=$(docker exec "$P-b2" sh -c 'cat /proc/[0-9]*/comm 2>/dev/null | grep -cx pgbouncer')

@@ -55,7 +55,9 @@ RUN chown -R ${PGBOUNCER_USER}:${PGBOUNCER_USER} ${PGBOUNCER_CERTS} ${PGBOUNCER_
 # LDAP (search+bind): LDAP_URI is the server host, LDAP_USER the bind DN and LDAP_PASSWORD
 # (no default) its password. $username in LDAP_SEARCH_FILTER is replaced by PgBouncer.
 # REJECT_USERS (separated by ',' or ':') are refused before any LDAP round trip, and left
-# out of the search so another spelling finds no entry either.
+# out of the search so another spelling finds no entry either. LDAP_SCHEME=ldaps (with
+# LDAP_PORT=636) or LDAP_TLS=1 (StartTLS) encrypt the LDAP connection; the server
+# certificate is verified, against LDAPTLS_CACERT when its CA is not in the system store.
 ENV MIN_POOL_SIZE=7\
 	DEFAULT_POOL_SIZE=73\
 	RESERVE_POOL_SIZE=5\
@@ -66,6 +68,8 @@ ENV MIN_POOL_SIZE=7\
 	PROCESSES=1\
 	LDAP_URI=\
 	LDAP_PORT=389\
+	LDAP_SCHEME=\
+	LDAP_TLS=\
 	LDAP_BASE_DN=\
 	LDAP_USER=\
 	LDAP_SEARCH_FILTER="(&(objectClass=posixAccount)(cn=\$username))"\

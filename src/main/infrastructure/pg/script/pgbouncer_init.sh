@@ -101,6 +101,24 @@ single_line LDAP_USER "${LDAP_USER}"
 single_line LDAP_PASSWORD "${LDAP_PASSWORD:-}"
 single_line LDAP_SEARCH_FILTER "${LDAP_SEARCH_FILTER}"
 single_line REJECT_USERS "${REJECT_USERS}"
+single_line LDAP_SCHEME "${LDAP_SCHEME:-}"
+single_line LDAP_TLS "${LDAP_TLS:-}"
+case "${LDAP_SCHEME:-}" in
+	""|ldap|ldaps)
+		;;
+	*)
+		echo "LDAP_SCHEME must be ldap or ldaps: ${LDAP_SCHEME}" >&2
+		exit 1
+		;;
+esac
+case "${LDAP_TLS:-}" in
+	""|0|1)
+		;;
+	*)
+		echo "LDAP_TLS must be 0 or 1: ${LDAP_TLS}" >&2
+		exit 1
+		;;
+esac
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
@@ -159,6 +177,11 @@ then
 	exit 1
 fi
 LDAP_OPTIONS=
+ldap_option ldapscheme "${LDAP_SCHEME:-}"
+if [ "${LDAP_TLS:-}" = 1 ]
+then
+	ldap_option ldaptls 1
+fi
 ldap_option ldapserver "${LDAP_URI}"
 ldap_option ldapport "${LDAP_PORT}"
 ldap_option ldapbasedn "${LDAP_BASE_DN}"

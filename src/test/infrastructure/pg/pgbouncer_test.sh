@@ -26,7 +26,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -80,6 +80,9 @@ include /etc/openldap/schema/nis.schema
 modulepath /usr/lib/openldap
 moduleload back_mdb.so
 pidfile /run/openldap/slapd.pid
+TLSCACertificateFile /tls/ca.crt
+TLSCertificateFile /tls/srv.crt
+TLSCertificateKeyFile /tls/srv.key
 database mdb
 directory /var/lib/openldap/test
 suffix "$BASE_DN"
@@ -89,11 +92,21 @@ EOF
 mkdir "$TMP/database"
 printf 'appdb = host=%s-pg port=5432 dbname=appdb\n' "$P" > "$TMP/database/database.ini"
 
+# slapd serves ldap:// (with StartTLS) and ldaps://, with a certificate for its container
+# name signed by a throwaway CA.
+cat > "$TMP/ldap.sh" <<'EOF'
+apk add -q --no-cache openldap openldap-back-mdb openssl >/dev/null || exit 2
+mkdir -p /var/lib/openldap/test /run/openldap /tls && cd /tls || exit 2
+openssl req -x509 -newkey rsa:2048 -nodes -keyout ca.key -out ca.crt -days 1 -subj /CN=test-ca 2>/dev/null
+openssl req -newkey rsa:2048 -nodes -keyout srv.key -out srv.csr -subj "/CN=$LDAP_HOST" 2>/dev/null
+printf 'subjectAltName=DNS:%s\n' "$LDAP_HOST" > ext.cnf
+openssl x509 -req -in srv.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out srv.crt -days 1 -extfile ext.cnf 2>/dev/null
+slapadd -q -f /slapd.conf -l /seed.ldif && exec slapd -d 256 -f /slapd.conf -h "ldap:/// ldaps:///"
+EOF
 docker network create "$P" >/dev/null || exit 2
-docker create --name "$P-ldap" --network "$P" "$ALPINE" sh -c \
-	'apk add -q --no-cache openldap openldap-back-mdb >/dev/null && mkdir -p /var/lib/openldap/test /run/openldap \
-	&& slapadd -q -f /slapd.conf -l /seed.ldif && exec slapd -d 256 -f /slapd.conf -h ldap:///' >/dev/null || exit 2
-docker cp "$TMP/slapd.conf" "$P-ldap:/slapd.conf" && docker cp "$TMP/seed.ldif" "$P-ldap:/seed.ldif" && docker start "$P-ldap" >/dev/null || exit 2
+docker create --name "$P-ldap" --network "$P" -e LDAP_HOST="$P-ldap" "$ALPINE" sh /ldap.sh >/dev/null || exit 2
+for f in slapd.conf seed.ldif ldap.sh; do docker cp "$TMP/$f" "$P-ldap:/$f" || exit 2; done
+docker start "$P-ldap" >/dev/null || exit 2
 docker run -d --name "$P-pg" --network "$P" -e POSTGRES_PASSWORD="$(rand)" -e POSTGRES_HOST_AUTH_METHOD=scram-sha-256 \
 	"$POSTGRES" >/dev/null || exit 2
 docker run -d --name "$P-client" --network "$P" --entrypoint sleep "$POSTGRES" infinity >/dev/null || exit 2
@@ -104,6 +117,7 @@ wait_for() { # <seconds> <command...>
 	return 1
 }
 wait_for 120 sh -c "docker logs $P-ldap 2>&1 | grep -q 'slapd starting'" || { echo "slapd did not start"; docker logs "$P-ldap" 2>&1 | tail -5; exit 2; }
+docker cp "$P-ldap:/tls/ca.crt" "$TMP/ca.crt" || exit 2
 wait_for 60 docker exec "$P-pg" pg_isready -U postgres -h localhost || { echo "postgres did not start"; exit 2; }
 docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE alice LOGIN PASSWORD '$ALICE_PW'" \
 	-c "CREATE ROLE datawarehouse LOGIN PASSWORD '$DW_PW'" -c "CREATE ROLE bob LOGIN PASSWORD '$BOB_PW'" \
@@ -118,6 +132,7 @@ bouncer() {
 		-e LDAP_URI="$P-ldap" -e LDAP_PORT=389 -e LDAP_BASE_DN="$BASE_DN" -e LDAP_USER="$dn" -e LDAP_PASSWORD="$pw" \
 		-e REJECT_USERS=datawarehouse "$@" "$IMAGE" >/dev/null || return 1
 	docker cp "$TMP/database" "$name:/etc/pgbouncer/database" || return 1
+	docker cp "$TMP/ca.crt" "$name:/tmp/ldap-ca.crt" || return 1
 	docker start "$name" >/dev/null || return 1
 	wait_for 60 sh -c "docker logs $name 2>&1 | grep -q 'process up'"
 }
@@ -213,6 +228,21 @@ if $HBA; then
 	check "a bare filter (cn=\$username without parentheses) with REJECT_USERS still logs in" "$OUT" [ "$OUT" = alice ]
 	OUT=$(q "$P-b7" DataWarehouse "$DW_PW" require appdb "select 1")
 	check "and still leaves the rejected user out in another spelling" "$OUT" [ "$OUT" != 1 ]
+	# TLS to LDAP, opt-in: ldaps on 636, StartTLS on 389, and a CA the server cert must chain to.
+	bouncer "$P-b10" "$BIND_DN" "$BIND_PW" -e LDAP_SCHEME=ldaps -e LDAP_PORT=636 -e LDAPTLS_CACERT=/tmp/ldap-ca.crt \
+		|| fail "a PgBouncer on ldaps starts"
+	OUT=$(q "$P-b10" alice "$ALICE_PW" require appdb "select current_user")
+	check "LDAP_SCHEME=ldaps (port 636, CA in LDAPTLS_CACERT) logs in" "$OUT" [ "$OUT" = alice ]
+	bouncer "$P-b11" "$BIND_DN" "$BIND_PW" -e LDAP_TLS=1 -e LDAPTLS_CACERT=/tmp/ldap-ca.crt || fail "a PgBouncer on StartTLS starts"
+	OUT=$(q "$P-b11" alice "$ALICE_PW" require appdb "select current_user")
+	check "LDAP_TLS=1 (StartTLS on 389) logs in" "$OUT" [ "$OUT" = alice ]
+	STARTTLS=$(docker logs "$P-ldap" 2>&1 | grep -c 'EXT oid=1.3.6.1.4.1.1466.20037')
+	check "and slapd saw the StartTLS request" "$STARTTLS" [ "$STARTTLS" != 0 ]
+	bouncer "$P-b12" "$BIND_DN" "$BIND_PW" -e LDAP_SCHEME=ldaps -e LDAP_PORT=636 || fail "a PgBouncer on ldaps without the CA starts"
+	OUT=$(q "$P-b12" alice "$ALICE_PW" require appdb "select 1")
+	check "ldaps without the server's CA is refused (the certificate is verified)" "$OUT" [ "$OUT" != 1 ]
+	refuses_to_boot "$P-b13" "with LDAP_TLS=yes" "LDAP_TLS must be 0 or 1" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_TLS=yes
 else
 	skip "the container refuses to boot on a missing or unusable LDAP setting (auth_type is not hba)"
 fi

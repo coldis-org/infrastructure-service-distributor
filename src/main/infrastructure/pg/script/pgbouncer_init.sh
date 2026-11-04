@@ -130,6 +130,15 @@ then
 	echo "LDAP_SCHEME=ldaps needs the ldaps port (usually LDAP_PORT=636), not 389" >&2
 	exit 1
 fi
+# libldap reads LDAPTLS_REQCERT from the environment; these values skip the certificate check.
+case "${LDAPTLS_REQCERT:-}" in
+	""|demand|hard)
+		;;
+	*)
+		echo "LDAPTLS_REQCERT=${LDAPTLS_REQCERT} would turn off the LDAP server certificate check" >&2
+		exit 1
+		;;
+esac
 if [ -z "${LDAP_URI}" ] || [ -z "${LDAP_BASE_DN}" ]
 then
 	echo "LDAP_URI and LDAP_BASE_DN must be set, or no user could log in" >&2
@@ -205,8 +214,11 @@ then
 	echo "The LDAP options are ${#LDAP_OPTIONS} characters, too long for PgBouncer (fewer REJECT_USERS?)" >&2
 	exit 1
 fi
+# The file holds the bind password: written to a new file under umask 077 (an existing one
+# would keep its mode while being rewritten), then moved into place.
+HBA_TEMP="${AUTH_HBA_FILE}.new"
+rm -f "${HBA_TEMP}"
 (
-	# The file holds the bind password: never readable by others, not even briefly.
 	umask 077
 	{
 		for REJECTED_USER in ${REJECTED_USERS}
@@ -216,10 +228,11 @@ fi
 		done
 		printf '%s\n' "local all all ldap${LDAP_OPTIONS}"
 		printf '%s\n' "host all all all ldap${LDAP_OPTIONS}"
-	} > "${AUTH_HBA_FILE}"
+	} > "${HBA_TEMP}"
 )
-chmod 600 "${AUTH_HBA_FILE}"
-chown "${PGBOUNCER_USER}:${PGBOUNCER_USER}" "${AUTH_HBA_FILE}"
+chmod 600 "${HBA_TEMP}"
+chown "${PGBOUNCER_USER}:${PGBOUNCER_USER}" "${HBA_TEMP}"
+mv -f "${HBA_TEMP}" "${AUTH_HBA_FILE}"
 # The HBA file has it now; the PgBouncer processes need not inherit it.
 unset LDAP_PASSWORD
 

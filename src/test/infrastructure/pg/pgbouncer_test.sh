@@ -30,7 +30,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" "$P-b14" "$P-b15" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" "$P-b7" "$P-b8" "$P-b9" "$P-b10" "$P-b11" "$P-b12" "$P-b13" "$P-b14" "$P-b15" "$P-b16" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -127,7 +127,8 @@ docker exec "$P-pg" psql -qU postgres -c "CREATE DATABASE appdb" -c "CREATE ROLE
 	-c "CREATE ROLE datawarehouse LOGIN PASSWORD '$DW_PW'" -c "CREATE ROLE bob LOGIN PASSWORD '$BOB_PW'" \
 	-c "CREATE ROLE ghost LOGIN PASSWORD '$BOB_PW'" -c "CREATE ROLE carol LOGIN PASSWORD '$CAROL_PW'" \
 	-c "CREATE ROLE eve LOGIN PASSWORD '$EVE_PW'" -c "CREATE ROLE \"DataWarehouse\" LOGIN PASSWORD '$DW_PW'" \
-	-c "CREATE ROLE \"al*\" LOGIN PASSWORD '$ALICE_PW'" >/dev/null || exit 2
+	-c "CREATE ROLE \"al*\" LOGIN PASSWORD '$ALICE_PW'" -c "CREATE ROLE \"eve)(|(cn=eve\" LOGIN PASSWORD '$EVE_PW'" \
+	>/dev/null || exit 2
 
 # Starts a PgBouncer from the image under test: <name> <bind dn> <bind password> [docker run args].
 bouncer() {
@@ -178,7 +179,9 @@ OUT=$(q "$B" 'al*' "$ALICE_PW" require appdb "select 1")
 check "a user name with filter characters (al*) is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
 # "eve)(|(cn=eve" would OR away the BLOCKED clause and let eve in.
 OUT=$(q "$B" 'eve)(|(cn=eve' "$EVE_PW" require appdb "select 1")
-check "a user name that reshapes the filter (eve)(|(cn=eve) is refused" "$OUT" [ "$OUT" != 1 ]
+check "a user name that reshapes the filter (eve)(|(cn=eve) is refused (it has a role too)" "$OUT" [ "$OUT" != 1 ]
+RESHAPED=$(docker logs "$P-ldap" 2>&1 | grep -c '(|(cn=eve)')
+check "and no search ever carried the reshaped filter" "$RESHAPED searches" [ "$RESHAPED" = 0 ]
 OUT=$(q "$B" alice "$ALICE_PW" disable appdb "select 1")
 check "a client without TLS is refused" "$OUT" [ "$OUT" != 1 ]
 OUT=$(q "$B" database.monitor "$MON_PW" require pgbouncer "show version")
@@ -263,6 +266,8 @@ if $HBA; then
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SCHEME=ldaps
 	refuses_to_boot "$P-b15" "with LDAP_SCHEME=ldaps and LDAP_TLS=1" "already TLS" \
 		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SCHEME=ldaps -e LDAP_PORT=636 -e LDAP_TLS=1
+	refuses_to_boot "$P-b16" "with LDAPTLS_REQCERT=never" "turn off the LDAP server certificate check" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAPTLS_REQCERT=never
 else
 	skip "the boot refusals, the bare filter and the LDAP TLS checks (EXPECT_HBA=false)"
 fi

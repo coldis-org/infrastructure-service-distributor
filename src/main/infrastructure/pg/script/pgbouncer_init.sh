@@ -93,16 +93,34 @@ case "${LDAP_URI}" in
 		;;
 esac
 REJECTED_USERS=$(echo "${REJECT_USERS}" | tr ',:' '  ')
-SEARCH_FILTER=${LDAP_SEARCH_FILTER}
+# PgBouncer's own default when no filter is given.
+SEARCH_FILTER=${LDAP_SEARCH_FILTER:-(uid=\$username)}
+case "${SEARCH_FILTER}" in
+	*'$username'*)
+		;;
+	*)
+		echo "LDAP_SEARCH_FILTER must contain \$username: ${SEARCH_FILTER}" >&2
+		exit 1
+		;;
+esac
 if [ -n "${REJECTED_USERS}" ]
 then
-	LOGIN_ATTRIBUTE=$(printf '%s' "${LDAP_SEARCH_FILTER}" | sed -n 's/.*(\([A-Za-z][A-Za-z0-9.;-]*\)=\$username).*/\1/p')
-	SEARCH_FILTER="(&${LDAP_SEARCH_FILTER}"
+	LOGIN_ATTRIBUTE=$(printf '%s' "${SEARCH_FILTER}" | sed -n 's/.*(\([A-Za-z][A-Za-z0-9.;-]*\)=\$username).*/\1/p')
+	SEARCH_FILTER="(&${SEARCH_FILTER}"
 	for REJECTED_USER in ${REJECTED_USERS}
 	do
 		SEARCH_FILTER="${SEARCH_FILTER}(!(${LOGIN_ATTRIBUTE:-cn}=$(ldap_escape "${REJECTED_USER}")))"
 	done
 	SEARCH_FILTER="${SEARCH_FILTER})"
+fi
+# PgBouncer expands $username into a 256-byte buffer and silently cuts the rest, which
+# breaks the filter. It must fit with a 63-byte user name (PostgreSQL's longest role name).
+PLACEHOLDERS=$(printf '%s' "${SEARCH_FILTER}" | grep -o '\$username' | wc -l)
+EXPANDED_LENGTH=$((${#SEARCH_FILTER} + PLACEHOLDERS * (63 - 9)))
+if [ "${EXPANDED_LENGTH}" -ge 256 ]
+then
+	echo "The LDAP search filter reaches ${EXPANDED_LENGTH} bytes with a 63-byte user name, PgBouncer takes 255 (fewer REJECT_USERS?)" >&2
+	exit 1
 fi
 LDAP_OPTIONS=
 ldap_option ldapserver "${LDAP_URI}"

@@ -26,7 +26,7 @@ FAILED=0
 SKIPPED=0
 TMP=$(mktemp -d)
 cleanup() {
-	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" >/dev/null 2>&1
+	docker rm -f "$P-ldap" "$P-pg" "$P-client" "$P-b1" "$P-b2" "$P-b3" "$P-b4" "$P-b5" "$P-b6" >/dev/null 2>&1
 	docker network rm "$P" >/dev/null 2>&1
 	rm -rf "$TMP"
 }
@@ -183,21 +183,27 @@ OK=0
 for _ in 1 2 3 4 5 6 7 8; do [ "$(q "$P-b2" alice "$ALICE_PW" require appdb "select 1")" = 1 ] && OK=$((OK + 1)); done
 check "and every login across them succeeds" "$OK/8" [ "$OK" = 8 ]
 
-# Starts a container that must refuse to boot: <name> <case> [docker run args].
+# Starts a container that must refuse to boot: <name> <case> <expected message> [docker run args].
 refuses_to_boot() {
-	local name=$1 case=$2 rc says; shift 2
+	local name=$1 case=$2 message=$3 rc says; shift 3
 	docker run -d --name "$name" --network "$P" -e CERT_CN=x "$@" "$IMAGE" >/dev/null
 	wait_for 30 sh -c "[ \"\$(docker inspect -f '{{.State.Running}}' $name)\" = false ]"
 	rc=$(docker inspect -f '{{.State.ExitCode}}' "$name")
-	says=$(docker logs "$name" 2>&1 | grep -c "must be set")
-	check "$case exits non-zero" "rc=$rc" [ "$rc" != 0 ]
+	says=$(docker logs "$name" 2>&1 | grep -c "$message")
+	check "$case, the container exits non-zero" "rc=$rc" [ "$rc" != 0 ]
 	check "and says why" "$says" [ "$says" != 0 ]
 }
 if $HBA; then
-	refuses_to_boot "$P-b3" "without LDAP_URI the container"
-	refuses_to_boot "$P-b4" "without LDAP_BASE_DN the container" -e LDAP_URI="$P-ldap"
+	refuses_to_boot "$P-b3" "without LDAP_URI" "must be set"
+	refuses_to_boot "$P-b4" "without LDAP_BASE_DN" "must be set" -e LDAP_URI="$P-ldap"
+	# Twelve 15-character names: the options fit in 1024 bytes, the filter not in 256.
+	refuses_to_boot "$P-b5" "with a search filter PgBouncer would cut" "PgBouncer takes 255" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" \
+		-e REJECT_USERS="$(printf 'service-user-%02d,' 1 2 3 4 5 6 7 8 9 10 11 12)"
+	refuses_to_boot "$P-b6" "with a search filter without \$username" "must contain" \
+		-e LDAP_URI="$P-ldap" -e LDAP_BASE_DN="$BASE_DN" -e LDAP_SEARCH_FILTER="(objectClass=posixAccount)"
 else
-	skip "the container refuses to boot without LDAP_URI or LDAP_BASE_DN (auth_type is not hba)"
+	skip "the container refuses to boot on a missing or unusable LDAP setting (auth_type is not hba)"
 fi
 
 echo "$PASSED passed, $FAILED failed, $SKIPPED skipped"

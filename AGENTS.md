@@ -2,14 +2,14 @@
 
 Edge and proxy images of the coldis platform (GitHub `coldis-org/infrastructure-service-distributor`):
 nginx built from source with ModSecurity (OWASP CRS) and the VTS status module, an nginx variant
-that exposes its configuration, an haproxy layer-4 balancer, pgbouncer built from source with PAM
-LDAP, and an Apache httpd with ModSecurity. No application code; `pom.xml` (parent
+that exposes its configuration, an haproxy layer-4 balancer, pgbouncer built from source on Alpine
+with LDAP authentication, and an Apache httpd with ModSecurity. No application code; `pom.xml` (parent
 `org.coldis:configuration`) carries no build of its own.
 
 Image layering: `nginx` copies the `os_*` scripts out of `coldis/infrastructure-os` in a build
 stage and builds on the official `nginx` image; `nginx-config` builds `FROM` a released `nginx`
 image (`coldis/infrastructure-service-distributor-nginx:1.9.9`). `layer4`, `pg` and `web` build
-on upstream images (`haproxy:2.3.7`, `debian:11.10-slim`, `httpd:2.4.48-buster`).
+on upstream images (`haproxy:2.3.7`, `alpine:3.24.3`, `httpd:2.4.48-buster`).
 
 ## Layout
 
@@ -20,7 +20,7 @@ All under `src/main/infrastructure/`.
 | `nginx/` | nginx `NGINX_VERSION` (1.30.6) + ModSecurity, VTS, NDK, set-misc; `config/nginx`, `config/modsecurity` (CRS), `html/`, `script/nginx_*.sh`, `cron/nginx_jobs` |
 | `nginx-config/` | Adds `nginx_expose_conf` and an extra `vhost.d/config.conf` on top of `nginx` |
 | `layer4/` | haproxy: `config/*.cfg`, `script/haproxy_*.sh`, `cron/haproxy_jobs`, `rsyslog.conf` |
-| `pg/` | pgbouncer `PGBOUNCER_VERSION` (1.24.1): `config/pgbouncer.ini`, `config/pam_ldap.conf`, `script/pgbouncer_*.sh` |
+| `pg/` | pgbouncer `PGBOUNCER_VERSION` (1.26.1, Alpine, `--with-ldap --with-cares`): `config/pgbouncer.ini`, `script/pgbouncer_*.sh` |
 | `web/` | Apache httpd: `config/` (with `extra/crs`), `config/original/` (upstream reference copies), `script/apache_*.sh`, `cron/apache_jobs` |
 | `*/service.json` | Marathon-style app definitions |
 
@@ -47,12 +47,21 @@ docker run --rm --entrypoint bash -v "$PWD/src/test/infrastructure/nginx:/test:r
 Run it on any change to `nginx_update_threat_blocklist` or the `threat-blocklist*` files, and record
 the result in the local check (`tests=<passed>/<run>`).
 
+The pgbouncer test runs on the host with docker: a throwaway OpenLDAP and PostgreSQL, the image
+under test and a psql client on a private network (needs network once, for slapd and postgres):
+
+```bash
+EXPECT_VERSION=<version> src/test/infrastructure/pg/pgbouncer_test.sh <pg image>
+```
+
+Run it on any change to the `pg` image, and record the result the same way.
+
 ## Gotchas
 
 - **Config is rendered at boot with `envsubst` over every environment variable.**
   `nginx_variables` does it to every file under `/etc/nginx`, `/etc/nginx/conf.d/*`,
-  `/etc/modsecurity.d` and `/etc/rsyslog.conf`; `pgbouncer_init` to `pgbouncer.ini` and
-  `pam_ldap.conf`. An nginx `$variable` whose name matches an environment variable is replaced.
+  `/etc/modsecurity.d` and `/etc/rsyslog.conf`; `pgbouncer_init` to `pgbouncer.ini`. An nginx
+  `$variable` whose name matches an environment variable is replaced.
 - **Cron tables are templates too.** `nginx_jobs` uses `${CERT_UPDATE_SCHEDULE}`,
   `${CONFIG_UPDATE_SCHEDULE}`, `${CERT_CLEANUP_SCHEDULE}`, rendered by `nginx_entrypoint`. Jobs
   load the boot environment from `/etc/docker_env` and log to `/proc/1/fd/1`.
@@ -68,6 +77,16 @@ the result in the local check (`tests=<passed>/<run>`).
   so edit the `.default` and let the script regenerate.
 - **pgbouncer runs several processes**: `pgbouncer.ini` is copied per process with
   `CURRENT_PROCESS` replaced in each copy.
+- **pgbouncer authentication is an HBA file `pgbouncer_init` writes, not a template.** It is
+  built from `LDAP_URI`, `LDAP_PORT`, `LDAP_SCHEME`/`LDAP_TLS` (ldaps or StartTLS, off by default;
+  the CA goes in `LDAPTLS_CACERT`), `LDAP_BASE_DN`, `LDAP_USER` (bind DN), `LDAP_PASSWORD`,
+  `LDAP_SEARCH_FILTER` and `REJECT_USERS` (refused before any LDAP round trip, and also left out
+  of the search filter so another spelling finds no entry), because envsubst would blank the
+  filter's `$username`. It holds the bind password, so it is mode 600; without `LDAP_URI` (a
+  host name, not a URL) or `LDAP_BASE_DN`, with a line break in any `LDAP_*` value or
+  `REJECT_USERS` (it would start an HBA rule of its own), with a filter without `$username`, or over
+  PgBouncer's limits (1024 bytes of options; 256 bytes of filter once `$username`, up to 63
+  bytes, is substituted: each rejected user costs about 20) the container exits.
 
 ## Conventions
 
@@ -77,6 +96,9 @@ the result in the local check (`tests=<passed>/<run>`).
 - Tunables are environment variables with a default in the Dockerfile `ENV` block, rendered into
   the config files at boot; schedules are environment variables too.
 - Cron tables live in `cron/`, are copied to `/etc/cron.d` and installed with `crontab`.
+- OS packages are not version-pinned: the base image tag pins the distribution release
+  (`apt-get`/`apk add` take that release's fixes). Upstream sources built here are pinned and
+  checksum-verified (`*_VERSION` + `*_SHA256`).
 
 ## Workspace
 

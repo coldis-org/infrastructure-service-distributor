@@ -17,7 +17,7 @@ All under `src/main/infrastructure/`.
 
 | Path | Holds |
 |------|-------|
-| `nginx/` | nginx `NGINX_VERSION` (1.30.6) + ModSecurity, VTS, NDK, set-misc; `config/nginx`, `config/modsecurity` (CRS), `html/`, `script/nginx_*.sh`, `cron/nginx_jobs` |
+| `nginx/` | nginx `NGINX_VERSION` (1.30.7) + ModSecurity, VTS, NDK, set-misc; `config/nginx`, `config/modsecurity` (CRS), `html/`, `script/nginx_*.sh`, `cron/nginx_jobs` |
 | `nginx-config/` | Adds `nginx_expose_conf` and an extra `vhost.d/config.conf` on top of `nginx` |
 | `layer4/` | haproxy: `config/*.cfg`, `script/haproxy_*.sh`, `cron/haproxy_jobs`, `rsyslog.conf` |
 | `pg/` | pgbouncer `PGBOUNCER_VERSION` (1.26.1, Alpine, `--with-ldap --with-cares`): `config/pgbouncer.ini`, `script/pgbouncer_*.sh` |

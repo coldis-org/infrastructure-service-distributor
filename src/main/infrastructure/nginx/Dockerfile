@@ -1,5 +1,5 @@
 # From Nginx image.
-ARG NGINX_VERSION=1.30.6
+ARG NGINX_VERSION=1.30.7
 ARG BUILD_PROC=16 
 
 # From Debian.
@@ -80,7 +80,9 @@ RUN wget --quiet https://github.com/openresty/set-misc-nginx-module/archive/refs
     && mv *set-misc* set-misc
 	
 # Builds NGINX.
-RUN wget --quiet http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+ARG NGINX_SHA256=2565b5c837050e958f70fb0f73c48e2bca4542ad349fd356f46fb0c72610bc6e
+RUN wget --quiet https://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz \
+	&& echo "${NGINX_SHA256}  nginx-${NGINX_VERSION}.tar.gz" | sha256sum -c - \
 	&& tar -xvzf nginx-${NGINX_VERSION}.tar.gz \
 	&& rm nginx-${NGINX_VERSION}.tar.gz \
 	&& cd ./nginx-${NGINX_VERSION} \

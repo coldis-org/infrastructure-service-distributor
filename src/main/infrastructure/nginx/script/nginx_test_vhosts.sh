@@ -5,7 +5,6 @@
 
 # Default parameters.
 DEBUG=${DEBUG:=false}
-DEBUG_OPT=
 conf_folder=/etc/nginx/
 vhosts_folder=/etc/nginx/vhost.d
 error_pattern="\[emerg\]"
@@ -19,7 +18,6 @@ while :; do
 		# Debug argument.
 		--debug)
 			DEBUG=true
-			DEBUG_OPT="--debug"
 			;;
 
 		# Only test files that include this fragment (an include.d/*.conf path).
@@ -55,13 +53,24 @@ ${DEBUG} && echo "nginx_test_vhosts: [DEBUG] Running"
 if [ -n "${fragment}" ]
 then
 	# Files that include the given fragment (matched by basename), excluding the
-	# fragments themselves and any already-quarantined .err files.
-	fragment_base=$( basename "${fragment}" )
-	${DEBUG} && echo "nginx_test_vhosts: [DEBUG] Looking for files that include ${fragment_base}"
-	candidates=$( grep -rlEI "include[[:space:]]+[^;]*${fragment_base}" \
-			"${conf_folder}conf.d" "${conf_folder}vhost.d" 2>/dev/null \
-		| grep -E '\.conf$' \
-		| grep -v '/include.d/' )
+	# fragments themselves and any already-quarantined .err files. A fragment
+	# included by other fragments is followed to the files that include those, up
+	# to 3 levels.
+	fragment_bases=$( basename "${fragment}" )
+	candidates=
+	for _ in 1 2 3
+	do
+		${DEBUG} && echo "nginx_test_vhosts: [DEBUG] Looking for files that include" ${fragment_bases}
+		includers=$( for fragment_base in ${fragment_bases}
+			do
+				grep -rlEI "include[[:space:]]+[^;]*${fragment_base}" \
+					"${conf_folder}conf.d" "${conf_folder}vhost.d" 2>/dev/null
+			done | grep -E '\.conf$' | sort -u )
+		candidates="${candidates} $( echo "${includers}" | grep -v '/include.d/' )"
+		fragment_bases=$( echo "${includers}" | grep '/include.d/' | xargs -r -n 1 basename )
+		[ -z "${fragment_bases}" ] && break
+	done
+	candidates=$( printf '%s\n' ${candidates} | sort -u )
 else
 	# All active vhosts.
 	candidates=$( find "${vhosts_folder}" -type f -name '*.conf' 2>/dev/null )

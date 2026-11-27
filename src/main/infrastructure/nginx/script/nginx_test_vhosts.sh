@@ -5,7 +5,6 @@
 
 # Default parameters.
 DEBUG=${DEBUG:=false}
-DEBUG_OPT=
 conf_folder=/etc/nginx/
 vhosts_folder=/etc/nginx/vhost.d
 error_pattern="\[emerg\]"
@@ -19,7 +18,6 @@ while :; do
 		# Debug argument.
 		--debug)
 			DEBUG=true
-			DEBUG_OPT="--debug"
 			;;
 
 		# Only test files that include this fragment (an include.d/*.conf path).
